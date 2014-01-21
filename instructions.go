@@ -1,5 +1,12 @@
 package main
 
+type RegisterType int
+const (
+	peIndex = iota
+	peRouting
+	peArithmetic
+)
+
 type ControlUnit struct {
 	ProgramCounter int64
 	IndexRegister []int64
@@ -36,35 +43,86 @@ func NewControlUnit(indexRegisters int, processingElements int, memoryBytesPerEl
 	return &cu
 }
 
-// vector load
-func (cu ControlUnit) lod(a int64, i int64) {
+
+
+
+func (cu ControlUnit) Mov(from RegisterType, to RegisterType) {
+	if from == to {
+		return
+	}
 	for _, pe := range cu.PE {
-		pe.lod(a, i)
+		pe.Mov(from, to)
 	}
 }
 
-// vector load
-func (cu ControlUnit) sto(a int64, i int64) {
+// @todo make this more efficient
+func (pe ProcessingElement) Mov(from RegisterType, to RegisterType) {
+	if(!pe.Enabled) {
+		return
+	}
+	var fromVal int64
+	switch from {
+	case peIndex:
+		fromVal = pe.Index
+	case peRouting:
+		fromVal = pe.RoutingRegister
+	case peArithmetic:
+		fromVal = pe.ArithmeticRegister
+	}
+	switch to {
+	case peIndex:
+		pe.Index = fromVal
+	case peRouting:
+		pe.RoutingRegister = fromVal
+	case peArithmetic:
+		pe.ArithmeticRegister = fromVal
+	}
+}
+
+
+// control broadcast. Broadcasts the Control's Arithmetic Register to every PE's Routing Register
+func (cu ControlUnit) Cbcast() {
 	for _, pe := range cu.PE {
-		pe.sto(a, i)
+		pe.RoutingRegister = cu.ArithmeticRegister
+	}
+}
+
+
+// control load
+func (cu ControlUnit) Cload(index int64) {
+	cu.ArithmeticRegister = cu.Memory[index];
+}
+
+// vector load
+func (cu ControlUnit) Lod(a int64, i int64) {
+	for _, pe := range cu.PE {
+		pe.Lod(a, i)
+	}
+}
+
+// vector store
+func (cu ControlUnit) Sto(a int64, i int64) {
+	for _, pe := range cu.PE {
+		pe.Sto(a, i)
 	}
 }
 
 
 // lod operation for individual PE
 // @todo change this to be signalled by a channel
-func (pe ProcessingElement) lod(a int64, i int64) {
+func (pe ProcessingElement) Lod(a int64, i int64) {
 	if(!pe.Enabled) {
 		return
 	}
 	pe.ArithmeticRegister = pe.Memory[a+i]
 }
 
-// lod operation for individual PE
+// sto operation for individual PE
 // @todo change this to be signalled by a channel
-func (pe ProcessingElement) sto(a int64, i int64) {
+func (pe ProcessingElement) Sto(a int64, i int64) {
 	if(!pe.Enabled) {
 		return
 	}
 	pe.Memory[a+i] = pe.ArithmeticRegister
 }
+
