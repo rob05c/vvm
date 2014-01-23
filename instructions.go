@@ -30,15 +30,15 @@ The Memory is 1 "BytesPerElement" larger than the number of PEs. This is so the 
 */
 func NewControlUnit(indexRegisters int, processingElements int, memoryBytesPerElement int) *ControlUnit {
 	var cu ControlUnit
-	memory := (memoryBytesPerElement + 1) * processingElements // +1 so the CU has its own memory
+	memory := memoryBytesPerElement * (processingElements + 1) // +1 so the CU has its own memory
 	cu.Memory = make([]int64, memory, memory)
 	cu.IndexRegister = make([]int64, indexRegisters, indexRegisters)
 	cu.Mask = make([]bool, processingElements, processingElements)
 	cu.PE = make([]ProcessingElement, processingElements, processingElements)
-	for i, pe := range cu.PE {
+	for i, _ := range cu.PE {
 		mpos := i * memoryBytesPerElement
 		mlen := mpos + memoryBytesPerElement
-		pe.Memory = cu.Memory[mpos:mlen]
+		cu.PE[i].Memory = cu.Memory[mpos:mlen]
 	}
 	return &cu
 }
