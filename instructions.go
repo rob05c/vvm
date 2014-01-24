@@ -1,6 +1,7 @@
 package main
 
-type RegisterType int
+type RegisterType int64
+
 const (
 	peIndex = iota
 	peRouting
@@ -8,21 +9,21 @@ const (
 )
 
 type ControlUnit struct {
-	ProgramCounter int64
-	IndexRegister []int64
+	ProgramCounter     int64
+	IndexRegister      []int64
 	ArithmeticRegister int64
-	Mask []bool
-	LengthRegister int64 // necessary?
-	PE []ProcessingElement
-	Memory []int64
+	Mask               []bool
+	LengthRegister     int64 // necessary?
+	PE                 []ProcessingElement
+	Memory             []int64
 }
 
 type ProcessingElement struct {
 	ArithmeticRegister int64
-	RoutingRegister int64
-	Index int64
-	Enabled bool
-	Memory []int64
+	RoutingRegister    int64
+	Index              int64
+	Enabled            bool
+	Memory             []int64
 }
 
 /*
@@ -43,10 +44,126 @@ func NewControlUnit(indexRegisters int, processingElements int, memoryBytesPerEl
 	return &cu
 }
 
+type InstructionType int64
+
+const (
+	// control instructions
+	isLdx = iota
+	isStx
+	isLdxi
+	isIncx
+	isDecx
+	isMulx
+	isCload
+	isCstore
+	isCmpx
+	isCbcast
+	// vector instructions
+	isLod
+	isSto
+	isAdd
+	isSub
+	isMul
+	isDiv
+	isBcast
+	isMov
+	isRadd
+	isRsub
+	isRmul
+	isRdiv
+)
+
+var InstructionParams = map[InstructionType]byte{
+	isLdx:    2,
+	isStx:    2,
+	isLdxi:   2,
+	isIncx:   2,
+	isDecx:   2,
+	isMulx:   2,
+	isCload:  1,
+	isCstore: 1,
+	isCmpx:   3,
+	isCbcast: 0,
+	isLod:    2,
+	isSto:    2,
+	isAdd:    2,
+	isSub:    2,
+	isMul:    2,
+	isDiv:    2,
+	isBcast:  1,
+	isMov:    2,
+	isRadd:   0,
+	isRsub:   0,
+	isRmul:   0,
+	isRdiv:   0,
+}
+
+func (cu ControlUnit) Run(program []int64) {
+	cu.ProgramCounter = 0
+	for cu.ProgramCounter != int64(len(program)) {
+		pc := cu.ProgramCounter
+		instruction := InstructionType(program[pc])
+		params := program[pc : pc+int64(InstructionParams[instruction])]
+		cu.Execute(instruction, params)
+		cu.ProgramCounter++
+	}
+}
+
+/// @param params must have as many members as the instruction takes parameters
+func (cu ControlUnit) Execute(instruction InstructionType, params []int64) {
+	switch instruction {
+	case isLdx:
+		cu.Ldx(params[0], params[1])
+	case isStx:
+		cu.Stx(params[0], params[1])
+	case isLdxi:
+		cu.Ldxi(params[0], params[1])
+	case isIncx:
+		cu.Incx(params[0], params[1])
+	case isDecx:
+		cu.Decx(params[0], params[1])
+	case isMulx:
+		cu.Mulx(params[0], params[1])
+	case isCload:
+		cu.Cload(params[0])
+	case isCstore:
+		cu.Cstore(params[0])
+	case isCmpx:
+		cu.Cmpx(params[0], params[1], params[2])
+	case isCbcast:
+		cu.Cbcast()
+	case isLod:
+		cu.Lod(params[0], params[1])
+	case isSto:
+		cu.Sto(params[0], params[1])
+	case isAdd:
+		cu.Add(params[0], params[1])
+	case isSub:
+		cu.Sub(params[0], params[1])
+	case isMul:
+		cu.Mul(params[0], params[1])
+	case isDiv:
+		cu.Div(params[0], params[1])
+	case isBcast:
+		cu.Bcast(params[0])
+	case isMov:
+		cu.Mov(RegisterType(params[0]), RegisterType(params[1])) ///< @todo change to be multiple 'instructions' ?
+	case isRadd:
+		cu.Radd()
+	case isRsub:
+		cu.Rsub()
+	case isRmul:
+		cu.Rmul()
+	case isRdiv:
+		cu.Rdiv()
+	}
+}
+
 //
 // control instructions
 //
 func (cu ControlUnit) Ldx(index int64, a int64) {
+	//	fmt.Printf("ldx: cu.index[%d] = cu.Memory[%d] (%d)"
 	cu.IndexRegister[index] = cu.Memory[a]
 }
 func (cu ControlUnit) Stx(index int64, a int64) {
@@ -71,10 +188,11 @@ func (cu ControlUnit) Cstore(index int64) {
 	cu.Memory[index] = cu.ArithmeticRegister
 }
 func (cu ControlUnit) Cmpx(index int64, ix2 int64, a int64) {
-	if(cu.IndexRegister[index] <= cu.IndexRegister[ix2]) {
+	if cu.IndexRegister[index] <= cu.IndexRegister[ix2] {
 		cu.ProgramCounter = a
 	}
 }
+
 // control broadcast. Broadcasts the Control's Arithmetic Register to every PE's Routing Register
 func (cu ControlUnit) Cbcast() {
 	for _, pe := range cu.PE {
@@ -117,7 +235,7 @@ func (cu ControlUnit) Div(a int64, i int64) {
 }
 func (cu ControlUnit) Bcast(i int64) {
 	for _, pe := range cu.PE {
-		if(!pe.Enabled) {
+		if !pe.Enabled {
 			continue
 		}
 		pe.RoutingRegister = cu.PE[i].RoutingRegister
@@ -157,28 +275,28 @@ func (cu ControlUnit) Rdiv() {
 /// PE (vector) instructions
 ///
 func (pe ProcessingElement) Add(a int64, i int64) {
-	if(!pe.Enabled) {
+	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister += pe.Memory[a+i]
 }
 func (pe ProcessingElement) Sub(a int64, i int64) {
-	if(!pe.Enabled) {
+	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister -= pe.Memory[a+i]
 }
 func (pe ProcessingElement) Mul(a int64, i int64) {
-	if(!pe.Enabled) {
+	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister *= pe.Memory[a+i]
 }
 func (pe ProcessingElement) Div(a int64, i int64) {
-	if(!pe.Enabled) {
+	if !pe.Enabled {
 		return
 	}
-	if(pe.ArithmeticRegister == 0) {
+	if pe.ArithmeticRegister == 0 {
 		return
 	}
 	pe.ArithmeticRegister /= pe.Memory[a+i]
@@ -187,7 +305,7 @@ func (pe ProcessingElement) Div(a int64, i int64) {
 // lod operation for individual PE
 // @todo change this to be signalled by a channel
 func (pe ProcessingElement) Lod(a int64, i int64) {
-	if(!pe.Enabled) {
+	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister = pe.Memory[a+i]
@@ -196,7 +314,7 @@ func (pe ProcessingElement) Lod(a int64, i int64) {
 // sto operation for individual PE
 // @todo change this to be signalled by a channel
 func (pe ProcessingElement) Sto(a int64, i int64) {
-	if(!pe.Enabled) {
+	if !pe.Enabled {
 		return
 	}
 	pe.Memory[a+i] = pe.ArithmeticRegister
@@ -204,7 +322,7 @@ func (pe ProcessingElement) Sto(a int64, i int64) {
 
 // @todo make this more efficient
 func (pe ProcessingElement) Mov(from RegisterType, to RegisterType) {
-	if(!pe.Enabled) {
+	if !pe.Enabled {
 		return
 	}
 	var fromVal int64
@@ -226,25 +344,25 @@ func (pe ProcessingElement) Mov(from RegisterType, to RegisterType) {
 	}
 }
 func (pe ProcessingElement) Radd() {
-	if(!pe.Enabled) {
+	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister += pe.RoutingRegister
 }
 func (pe ProcessingElement) Rsub() {
-	if(!pe.Enabled) {
+	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister -= pe.RoutingRegister
 }
 func (pe ProcessingElement) Rmul() {
-	if(!pe.Enabled) {
+	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister *= pe.RoutingRegister
 }
 func (pe ProcessingElement) Rdiv() {
-	if(!pe.Enabled) {
+	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister /= pe.RoutingRegister
