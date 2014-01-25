@@ -1,5 +1,9 @@
 package main
 
+import (
+	"fmt"
+)
+
 type RegisterType int64
 
 const (
@@ -27,7 +31,7 @@ type ProcessingElement struct {
 }
 
 /*
-The Memory is 1 "BytesPerElement" larger than the number of PEs. This is so the CU may have its own memory.
+nThe Memory is 1 "BytesPerElement" larger than the number of PEs. This is so the CU may have its own memory.
 */
 func NewControlUnit(indexRegisters int, processingElements int, memoryBytesPerElement int) *ControlUnit {
 	var cu ControlUnit
@@ -44,11 +48,11 @@ func NewControlUnit(indexRegisters int, processingElements int, memoryBytesPerEl
 	return &cu
 }
 
-type InstructionType int64
+type InstructionType byte
 
 const (
 	// control instructions
-	isLdx = iota
+	isLdx InstructionType = iota
 	isStx
 	isLdxi
 	isIncx
@@ -66,12 +70,62 @@ const (
 	isMul
 	isDiv
 	isBcast
-	isMov
+	isMov // debug: 18
 	isRadd
 	isRsub
 	isRmul
 	isRdiv
 )
+
+func (i InstructionType) String() string {
+	switch i {
+	case isLdx:
+		return "ldx"
+	case isStx:
+		return "stx"
+	case isLdxi:
+		return "ldxi"
+	case isIncx:
+		return "incx"
+	case isDecx:
+		return "decx"
+	case isMulx:
+		return "mulx"
+	case isCload:
+		return "cload"
+	case isCstore:
+		return "cstore"
+	case isCmpx:
+		return "cmpx"
+	case isCbcast:
+		return "cbcast"
+	case isLod:
+		return "lod"
+	case isSto:
+		return "sto"
+	case isAdd:
+		return "add"
+	case isSub:
+		return "sub"
+	case isMul:
+		return "mul"
+	case isDiv:
+		return "div"
+	case isBcast:
+		return "bcast"
+	case isMov:
+		return "mov"
+	case isRadd:
+		return "radd"
+	case isRsub:
+		return "rsub"
+	case isRmul:
+		return "rmul"
+	case isRdiv:
+		return "rdiv"
+	}
+	return "NUL"
+}
 
 var InstructionParams = map[InstructionType]byte{
 	isLdx:    2,
@@ -98,19 +152,43 @@ var InstructionParams = map[InstructionType]byte{
 	isRdiv:   0,
 }
 
-func (cu ControlUnit) Run(program []int64) {
+type Program []byte
+
+func (p *Program) Push(instruction InstructionType, params []byte) {
+	byte1 := byte(instruction) | params[0]<<6
+	byte2 := params[0]>>2 | params[1]<<4
+	byte3 := params[1]>>4 | params[2]<<2
+	*p = append(*p, byte1)
+	*p = append(*p, byte2)
+	*p = append(*p, byte3)
+}
+
+// returns the number of instructions. Use for creating Labels and Jump positions
+func (p *Program) Size() byte {
+	return byte(len(*p) / 3)
+}
+
+const InstructionLength = 3
+
+func (cu *ControlUnit) Run(program Program) {
 	cu.ProgramCounter = 0
-	for cu.ProgramCounter != int64(len(program)) {
+	for cu.ProgramCounter != int64(len(program)/3) {
 		pc := cu.ProgramCounter
-		instruction := InstructionType(program[pc])
-		params := program[pc : pc+int64(InstructionParams[instruction])]
-		cu.Execute(instruction, params)
+		instruction := InstructionType(program[pc*InstructionLength]) & 63 // 63 = 00111111
+		param1 := program[pc*InstructionLength]>>6 | program[pc*InstructionLength+1]<<2&63
+		param2 := program[pc*InstructionLength+1]>>4 | program[pc*InstructionLength+2]<<4&63
+		param3 := program[pc*InstructionLength+2] >> 2
+
+		fmt.Printf("PC: %3d  IS: %5s  P1: %d  P2: %d  P3: %d\n", cu.ProgramCounter, instruction.String(), param1, param2, param3) // debug
+		cu.PrintMachine()                                                                                                         // debug
+
+		cu.Execute(instruction, []byte{param1, param2, param3})
 		cu.ProgramCounter++
 	}
 }
 
 /// @param params must have as many members as the instruction takes parameters
-func (cu ControlUnit) Execute(instruction InstructionType, params []int64) {
+func (cu *ControlUnit) Execute(instruction InstructionType, params []byte) {
 	switch instruction {
 	case isLdx:
 		cu.Ldx(params[0], params[1])
@@ -159,42 +237,135 @@ func (cu ControlUnit) Execute(instruction InstructionType, params []int64) {
 	}
 }
 
+func (cu *ControlUnit) PrintMachine() {
+	cu.printCu()
+	cu.printPe()
+	cu.printMemory()
+}
+
+func (cu *ControlUnit) printMemory() {
+	bytesPerPe := len(cu.Memory) / (len(cu.PE) + 1)
+	/*
+		fmt.Printf("PE: ")
+		for i, _ := range cu.PE {
+			fmt.Printf("%3d", i)
+		}
+		fmt.Printf("\n")
+	*/
+	fmt.Printf("----")
+	for i := 0; i < len(cu.PE); i++ {
+		fmt.Printf("---")
+	}
+	fmt.Printf("\n")
+
+	for i := 0; i < bytesPerPe; i++ {
+		fmt.Printf("    ")
+		for j := 0; j < len(cu.PE); j++ {
+			pe := cu.PE[j]
+			fmt.Printf("%3d", pe.Memory[i])
+		}
+		fmt.Printf("\n")
+	}
+
+}
+
+func (cu *ControlUnit) printPe() {
+	//	bytesPerPe := len(cu.Memory) / (len(cu.PE) + 1)
+	fmt.Printf("PE: ")
+	for i, _ := range cu.PE {
+		fmt.Printf("%3d", i)
+	}
+	fmt.Printf("\n")
+
+	fmt.Printf("----")
+	for i := 0; i < len(cu.PE); i++ {
+		fmt.Printf("---")
+	}
+	fmt.Printf("\n")
+
+	fmt.Printf("AR: ")
+	for j := 0; j < len(cu.PE); j++ {
+		pe := cu.PE[j]
+		fmt.Printf("%3d", pe.ArithmeticRegister)
+	}
+	fmt.Printf("\n")
+
+	fmt.Printf("RR: ")
+	for j := 0; j < len(cu.PE); j++ {
+		pe := cu.PE[j]
+		fmt.Printf("%3d", pe.RoutingRegister)
+	}
+	fmt.Printf("\n")
+
+	fmt.Printf("Ix: ")
+	for j := 0; j < len(cu.PE); j++ {
+		pe := cu.PE[j]
+		fmt.Printf("%3d", pe.Index)
+	}
+	fmt.Printf("\n")
+
+	fmt.Printf("En: ")
+	for j := 0; j < len(cu.PE); j++ {
+		pe := cu.PE[j]
+		if pe.Enabled {
+			fmt.Printf("%3d", 1)
+		} else {
+			fmt.Printf("%3d", 0)
+		}
+	}
+	fmt.Printf("\n")
+
+}
+
+func (cu *ControlUnit) printCu() {
+	/// @todo print Mask, Memory?
+	fmt.Printf("PC: %d  AR: %d  LR: %d\nIR: %d\nMask: ", cu.ProgramCounter, cu.ArithmeticRegister, cu.LengthRegister, cu.IndexRegister)
+	for i := 0; i < len(cu.Mask); i++ {
+		if cu.Mask[i] {
+			fmt.Printf("1  ")
+		} else {
+			fmt.Printf("0  ")
+		}
+	}
+	fmt.Printf("\n--------------------------------------------------------------------------------\n")
+}
+
 //
 // control instructions
 //
-func (cu ControlUnit) Ldx(index int64, a int64) {
+func (cu *ControlUnit) Ldx(index byte, a byte) {
 	//	fmt.Printf("ldx: cu.index[%d] = cu.Memory[%d] (%d)"
 	cu.IndexRegister[index] = cu.Memory[a]
 }
-func (cu ControlUnit) Stx(index int64, a int64) {
+func (cu *ControlUnit) Stx(index byte, a byte) {
 	cu.Memory[a] = cu.IndexRegister[index]
 }
-func (cu ControlUnit) Ldxi(index int64, a int64) {
-	cu.IndexRegister[index] = a
+func (cu *ControlUnit) Ldxi(index byte, a byte) {
+	cu.IndexRegister[index] = int64(a)
 }
-func (cu ControlUnit) Incx(index int64, a int64) {
-	cu.IndexRegister[index] += a
+func (cu *ControlUnit) Incx(index byte, a byte) {
+	cu.IndexRegister[index] += int64(a)
 }
-func (cu ControlUnit) Decx(index int64, a int64) {
-	cu.IndexRegister[index] -= a
+func (cu *ControlUnit) Decx(index byte, a byte) {
+	cu.IndexRegister[index] -= int64(a)
 }
-func (cu ControlUnit) Mulx(index int64, a int64) {
-	cu.IndexRegister[index] *= a
+func (cu *ControlUnit) Mulx(index byte, a byte) {
+	cu.IndexRegister[index] *= int64(a)
 }
-func (cu ControlUnit) Cload(index int64) {
+func (cu *ControlUnit) Cload(index byte) {
 	cu.ArithmeticRegister = cu.Memory[index]
 }
-func (cu ControlUnit) Cstore(index int64) {
+func (cu *ControlUnit) Cstore(index byte) {
 	cu.Memory[index] = cu.ArithmeticRegister
 }
-func (cu ControlUnit) Cmpx(index int64, ix2 int64, a int64) {
+func (cu *ControlUnit) Cmpx(index byte, ix2 byte, a byte) {
 	if cu.IndexRegister[index] <= cu.IndexRegister[ix2] {
-		cu.ProgramCounter = a
+		cu.ProgramCounter = int64(a) - 1 // -1 because the PC will be incremented.
 	}
 }
 
 // control broadcast. Broadcasts the Control's Arithmetic Register to every PE's Routing Register
-func (cu ControlUnit) Cbcast() {
+func (cu *ControlUnit) Cbcast() {
 	for _, pe := range cu.PE {
 		pe.RoutingRegister = cu.ArithmeticRegister
 	}
@@ -203,37 +374,37 @@ func (cu ControlUnit) Cbcast() {
 //
 // vector instructions
 //
-func (cu ControlUnit) Lod(a int64, i int64) {
+func (cu *ControlUnit) Lod(a byte, i byte) {
 	for _, pe := range cu.PE {
 		pe.Lod(a, i)
 	}
 }
-func (cu ControlUnit) Sto(a int64, i int64) {
+func (cu *ControlUnit) Sto(a byte, i byte) {
 	for _, pe := range cu.PE {
 		pe.Sto(a, i)
 	}
 }
-func (cu ControlUnit) Add(a int64, i int64) {
+func (cu *ControlUnit) Add(a byte, i byte) {
 	for _, pe := range cu.PE {
 		pe.Add(a, i)
 	}
 }
-func (cu ControlUnit) Sub(a int64, i int64) {
+func (cu *ControlUnit) Sub(a byte, i byte) {
 	for _, pe := range cu.PE {
 		pe.Sub(a, i)
 	}
 }
-func (cu ControlUnit) Mul(a int64, i int64) {
+func (cu *ControlUnit) Mul(a byte, i byte) {
 	for _, pe := range cu.PE {
 		pe.Mul(a, i)
 	}
 }
-func (cu ControlUnit) Div(a int64, i int64) {
+func (cu *ControlUnit) Div(a byte, i byte) {
 	for _, pe := range cu.PE {
 		pe.Div(a, i)
 	}
 }
-func (cu ControlUnit) Bcast(i int64) {
+func (cu *ControlUnit) Bcast(i byte) {
 	for _, pe := range cu.PE {
 		if !pe.Enabled {
 			continue
@@ -241,7 +412,7 @@ func (cu ControlUnit) Bcast(i int64) {
 		pe.RoutingRegister = cu.PE[i].RoutingRegister
 	}
 }
-func (cu ControlUnit) Mov(from RegisterType, to RegisterType) {
+func (cu *ControlUnit) Mov(from RegisterType, to RegisterType) {
 	if from == to {
 		return
 	}
@@ -250,22 +421,22 @@ func (cu ControlUnit) Mov(from RegisterType, to RegisterType) {
 	}
 }
 
-func (cu ControlUnit) Radd() {
+func (cu *ControlUnit) Radd() {
 	for _, pe := range cu.PE {
 		pe.Radd()
 	}
 }
-func (cu ControlUnit) Rsub() {
+func (cu *ControlUnit) Rsub() {
 	for _, pe := range cu.PE {
 		pe.Rsub()
 	}
 }
-func (cu ControlUnit) Rmul() {
+func (cu *ControlUnit) Rmul() {
 	for _, pe := range cu.PE {
 		pe.Rmul()
 	}
 }
-func (cu ControlUnit) Rdiv() {
+func (cu *ControlUnit) Rdiv() {
 	for _, pe := range cu.PE {
 		pe.Rdiv()
 	}
@@ -274,25 +445,25 @@ func (cu ControlUnit) Rdiv() {
 ///
 /// PE (vector) instructions
 ///
-func (pe ProcessingElement) Add(a int64, i int64) {
+func (pe *ProcessingElement) Add(a byte, i byte) {
 	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister += pe.Memory[a+i]
 }
-func (pe ProcessingElement) Sub(a int64, i int64) {
+func (pe *ProcessingElement) Sub(a byte, i byte) {
 	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister -= pe.Memory[a+i]
 }
-func (pe ProcessingElement) Mul(a int64, i int64) {
+func (pe *ProcessingElement) Mul(a byte, i byte) {
 	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister *= pe.Memory[a+i]
 }
-func (pe ProcessingElement) Div(a int64, i int64) {
+func (pe *ProcessingElement) Div(a byte, i byte) {
 	if !pe.Enabled {
 		return
 	}
@@ -304,7 +475,7 @@ func (pe ProcessingElement) Div(a int64, i int64) {
 
 // lod operation for individual PE
 // @todo change this to be signalled by a channel
-func (pe ProcessingElement) Lod(a int64, i int64) {
+func (pe *ProcessingElement) Lod(a byte, i byte) {
 	if !pe.Enabled {
 		return
 	}
@@ -313,7 +484,7 @@ func (pe ProcessingElement) Lod(a int64, i int64) {
 
 // sto operation for individual PE
 // @todo change this to be signalled by a channel
-func (pe ProcessingElement) Sto(a int64, i int64) {
+func (pe *ProcessingElement) Sto(a byte, i byte) {
 	if !pe.Enabled {
 		return
 	}
@@ -321,7 +492,7 @@ func (pe ProcessingElement) Sto(a int64, i int64) {
 }
 
 // @todo make this more efficient
-func (pe ProcessingElement) Mov(from RegisterType, to RegisterType) {
+func (pe *ProcessingElement) Mov(from RegisterType, to RegisterType) {
 	if !pe.Enabled {
 		return
 	}
@@ -343,25 +514,25 @@ func (pe ProcessingElement) Mov(from RegisterType, to RegisterType) {
 		pe.ArithmeticRegister = fromVal
 	}
 }
-func (pe ProcessingElement) Radd() {
+func (pe *ProcessingElement) Radd() {
 	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister += pe.RoutingRegister
 }
-func (pe ProcessingElement) Rsub() {
+func (pe *ProcessingElement) Rsub() {
 	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister -= pe.RoutingRegister
 }
-func (pe ProcessingElement) Rmul() {
+func (pe *ProcessingElement) Rmul() {
 	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister *= pe.RoutingRegister
 }
-func (pe ProcessingElement) Rdiv() {
+func (pe *ProcessingElement) Rdiv() {
 	if !pe.Enabled {
 		return
 	}
