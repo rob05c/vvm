@@ -80,7 +80,59 @@ const (
 	isRsub
 	isRmul
 	isRdiv
+
+	isInvalid InstructionType = ^InstructionType(0)
 )
+
+func StringToInstruction(s string) InstructionType {
+	switch s {
+	case "ldx":
+		return isLdx
+	case "stx":
+		return isStx
+	case "ldxi":
+		return isLdxi
+	case "incx":
+		return isIncx
+	case "decx":
+		return isDecx
+	case "mulx":
+		return isMulx
+	case "cload":
+		return isCload
+	case "cstore":
+		return isCstore
+	case "cmpx":
+		return isCmpx
+	case "cbcast":
+		return isCbcast
+	case "lod":
+		return isLod
+	case "sto":
+		return isSto
+	case "add":
+		return isAdd
+	case "sub":
+		return isSub
+	case "mul":
+		return isMul
+	case "div":
+		return isDiv
+	case "bcast":
+		return isBcast
+	case "mov":
+		return isMov
+	case "radd":
+		return isRadd
+	case "rsub":
+		return isSub
+	case "rmul":
+		return isRmul
+	case "rdiv":
+		return isRdiv
+	}
+	return isInvalid
+}
 
 func (i InstructionType) String() string {
 	switch i {
@@ -452,6 +504,8 @@ func (cu *ControlUnit) Cload(index uint16) {
 func (cu *ControlUnit) Cstore(index uint16) {
 	cu.Memory[index] = cu.ArithmeticRegister
 }
+
+/// @todo fix this to take a larger jump (a). Byte only allows for 256 instructions. That's not a very big program
 func (cu *ControlUnit) Cmpx(index byte, ix2 byte, a byte) {
 	if cu.IndexRegister[index] < cu.IndexRegister[ix2] {
 		cu.ProgramCounter = int64(a) - 1 // -1 because the PC will be incremented.
