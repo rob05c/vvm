@@ -439,7 +439,7 @@ func (cu *ControlUnit) Cstore(index uint16) {
 	cu.Memory[index] = cu.ArithmeticRegister
 }
 func (cu *ControlUnit) Cmpx(index byte, ix2 byte, a byte) {
-	if cu.IndexRegister[index] <= cu.IndexRegister[ix2] {
+	if cu.IndexRegister[index] < cu.IndexRegister[ix2] {
 		cu.ProgramCounter = int64(a) - 1 // -1 because the PC will be incremented.
 	}
 }
