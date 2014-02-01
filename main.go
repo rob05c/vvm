@@ -8,7 +8,7 @@ import (
 func main() {
 	cu := NewControlUnit(64, 16, 32)
 	fmt.Println("You made a vector VM with " + strconv.Itoa(len(cu.PE)) + " processing elements.") //debug
-	n := 10
+	n := 3
 	a := createMatrix(n)
 	b := createMatrix(n)
 	//	c := createMatrix()
@@ -17,9 +17,11 @@ func main() {
 	offset += int64(len(a)) // row length
 	loadMatrix(cu, b, offset)
 
+	fmt.Println("main() Start State")
 	cu.PrintMachine()
-	fmt.Println("Multiplying...\n")
+	fmt.Println("main() Multiplying...\n")
 	matrixMultiply(cu, byte(n))
+	fmt.Println("main() Final State")
 	cu.PrintMachine()
 
 	//	program := addInstruction(nil, isMov, []byte{4, 9, 15})
@@ -30,7 +32,7 @@ func createMatrix(n int) [][]int64 {
 	for i, _ := range matrix {
 		matrix[i] = make([]int64, n, n)
 		for j, _ := range matrix[i] {
-			matrix[i][j] = int64(j + 1)
+			matrix[i][j] = int64(j + 2)
 		}
 	}
 	return matrix
@@ -83,7 +85,7 @@ func loadMatrix(cu *ControlUnit, matrix [][]int64, offset int64) {
 // and stores the result in the immediately following memory
 //
 /// @param n dimension of the matrices
-func matrixMultiply(cu *ControlUnit, n byte) {
+func matrixMultiply(cu *ControlUnit, matrixDimension byte) {
 	// indices into the CU Index Register
 	lim := byte(1)
 	i := byte(2)
@@ -91,11 +93,20 @@ func matrixMultiply(cu *ControlUnit, n byte) {
 
 	// indices into memory
 	a := byte(0)
-	b := byte(a + n)
-	c := byte(b + n)
+	b := byte(a + matrixDimension)
+	c := byte(b + matrixDimension)
 
-	var program Program
-	program.Push(isLdx, []byte{j, 0, 0})
+	var pprogram PseudoProgram
+	n := pprogram.DataOp(cu, matrixDimension)
+
+	//	zero :=
+	pprogram.DataOp(cu, 0)
+
+	program := CreateProgram(pprogram)
+	program.Push(isLdxi, []byte{j, 0, 0})
+
+	program.PushMem(isLdx, lim, n)
+
 	labelLoop := program.Size()
 	program.Push(isLod, []byte{a, i, 0})
 	program.Push(isMov, []byte{peArithmetic, peRouting, 0})
@@ -106,7 +117,11 @@ func matrixMultiply(cu *ControlUnit, n byte) {
 	program.Push(isSto, []byte{c, i, 0})
 	program.Push(isIncx, []byte{j, 1, 0})
 	program.Push(isCmpx, []byte{j, lim, labelLoop})
-	fmt.Print("Program: ")
+	/*
+
+	*/
+
+	fmt.Print("matrixMultiply() Program: ")
 	fmt.Println(program)
 	fmt.Print("\n")
 	cu.Run(program)
