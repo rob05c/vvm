@@ -30,8 +30,7 @@ func main() {
 func createMatrix(n int) [][]int64 {
 	matrix := make([][]int64, n, n)
 	for i, _ := range matrix {
-		matrix[i] = make([]int64, n, n) // debug +1
-//		matrix[i] = make([]int64, n+1, n+1) // debug +1
+		matrix[i] = make([]int64, n, n)
 		for j, _ := range matrix[i] {
 			matrix[i][j] = int64(j + 2)
 		}
