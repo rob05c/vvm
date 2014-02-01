@@ -1,7 +1,11 @@
+///
+/// @todo split this into multiple files
+///
 package main
 
 import (
 	"fmt"
+	"io/ioutil"
 )
 
 type RegisterType int64
@@ -187,6 +191,16 @@ func (p *Program) Push(instruction InstructionType, params []byte) {
 // returns the number of instructions. Use for creating Labels and Jump positions
 func (p *Program) Size() byte {
 	return byte(len(*p) / 3)
+}
+
+/// This doesn't really compile. The "compiling" to binary has already been done by the lexer
+/// This just writes the byte array to a file
+func (p Program) Save(file string) error {
+	return ioutil.WriteFile(file, p, 0x777)
+}
+
+func LoadProgram(file string) (Program, error) {
+	return ioutil.ReadFile(file)
 }
 
 type PseudoProgram Program

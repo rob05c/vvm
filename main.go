@@ -125,18 +125,22 @@ func matrixMultiply(cu *ControlUnit, matrixDimension byte) {
 	program.Push(isSto, []byte{c, i, 0})
 	program.Push(isIncx, []byte{j, 1, 0})
 	program.Push(isCmpx, []byte{j, lim, labelLoop})
-
-
 	program.Push(isLdxi, []byte{j, 0, 0})
 	program.Push(isIncx, []byte{i, 1, 0})
 	program.Push(isCmpx, []byte{i, lim, labelLoop})
 
-	/*
-
-	*/
-
 	fmt.Print("matrixMultiply() Program: ")
 	fmt.Println(program)
 	fmt.Print("\n")
-	cu.Run(program)
+	file := "program.simd"
+	err := program.Save(file)
+	if err != nil {
+		fmt.Println(err)
+	}
+	program2, err := LoadProgram(file)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	cu.Run(program2)
 }
