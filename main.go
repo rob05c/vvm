@@ -30,7 +30,8 @@ func main() {
 func createMatrix(n int) [][]int64 {
 	matrix := make([][]int64, n, n)
 	for i, _ := range matrix {
-		matrix[i] = make([]int64, n, n)
+		matrix[i] = make([]int64, n, n) // debug +1
+//		matrix[i] = make([]int64, n+1, n+1) // debug +1
 		for j, _ := range matrix[i] {
 			matrix[i][j] = int64(j + 2)
 		}
@@ -87,14 +88,20 @@ func loadMatrix(cu *ControlUnit, matrix [][]int64, offset int64) {
 /// @param n dimension of the matrices
 func matrixMultiply(cu *ControlUnit, matrixDimension byte) {
 	// indices into the CU Index Register
-	lim := byte(1)
-	i := byte(2)
-	j := byte(3)
+	nextRegister := byte(0)
+	lim := nextRegister
+	nextRegister++
+
+	i := nextRegister
+	nextRegister++
+
+	j := nextRegister
+	nextRegister++
 
 	// indices into memory
 	a := byte(0)
-	b := byte(a + matrixDimension)
-	c := byte(b + matrixDimension)
+	b := a + matrixDimension
+	c := b + matrixDimension
 
 	var pprogram PseudoProgram
 	n := pprogram.DataOp(cu, matrixDimension)
@@ -103,6 +110,7 @@ func matrixMultiply(cu *ControlUnit, matrixDimension byte) {
 	pprogram.DataOp(cu, 0)
 
 	program := CreateProgram(pprogram)
+	program.Push(isLdxi, []byte{i, 0, 0})
 	program.Push(isLdxi, []byte{j, 0, 0})
 
 	program.PushMem(isLdx, lim, n)
@@ -117,6 +125,12 @@ func matrixMultiply(cu *ControlUnit, matrixDimension byte) {
 	program.Push(isSto, []byte{c, i, 0})
 	program.Push(isIncx, []byte{j, 1, 0})
 	program.Push(isCmpx, []byte{j, lim, labelLoop})
+
+
+	program.Push(isLdxi, []byte{j, 0, 0})
+	program.Push(isIncx, []byte{i, 1, 0})
+	program.Push(isCmpx, []byte{i, lim, labelLoop})
+
 	/*
 
 	*/
