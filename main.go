@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"flag"
+	"fmt"
 	"io/ioutil"
+	"os"
 )
 
 const DefaultIndexRegisters = 64
@@ -12,13 +13,13 @@ const DefaultMemoryPerElement = 32
 
 var compileFile string
 var outputFile string
+
 func init() {
 	const (
 		compileDefault = ""
-		compileUsage = "file to compile"
-		outputDefault = "output.simd"
-		outputUsage = "output file for compiled binary"
-
+		compileUsage   = "file to compile"
+		outputDefault  = "output.simd"
+		outputUsage    = "output file for compiled binary"
 	)
 	flag.StringVar(&compileFile, "compile", compileDefault, compileUsage)
 	flag.StringVar(&compileFile, "c", compileDefault, compileUsage+" (shorthand)")
@@ -41,7 +42,15 @@ func main() {
 		return
 	}
 
+	exeName := os.Args[0]
+	fmt.Println("usage: ")
+	fmt.Println("\t" + exeName + " -c file-to-compile.sasm -o output-file")
+	fmt.Println("\t" + exeName + " file-to-execute.simd")
+	fmt.Println("flags:")
 	flag.PrintDefaults()
+	fmt.Println("example:\n\t" + exeName + " -c input.sasm")
+	fmt.Println("\t" + exeName + " -c input.sasm -o matrix_multiply.simd")
+	fmt.Println("\t" + exeName + " output.simd")
 	return
 }
 
@@ -51,14 +60,14 @@ func compile(cu *ControlUnit) {
 		fmt.Println(err)
 		return
 	}
-	
+
 	input := string(bytes)
 	program, err := LexProgram(cu, input)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	
+
 	err = program.Save(outputFile)
 	if err != nil {
 		fmt.Println(err)

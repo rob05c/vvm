@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-//	"fmt"
+	//	"fmt"
 	"strconv"
 	"strings"
 )
@@ -19,21 +19,17 @@ func LexProgram(cu *ControlUnit, source string) (Program, error) {
 	lines, labels := ParseLabels(lines)
 	return ReplaceLabels(lines, labels, program)
 
+	//	input := strings.Join(lines, "\n") // debug
+	//	fmt.Println("ppo input: X" + input + "X")
 
-//	input := strings.Join(lines, "\n") // debug
-//	fmt.Println("ppo input: X" + input + "X")
+	//	output := strings.Join(lines, "\n")         // debug
+	//	fmt.Println("ppo output: X" + output + "X") // debug
 
+	//	output = strings.Join(lines, "\n")         // debug
+	//	fmt.Println("pl output: X" + output + "X") // debug
 
-//	output := strings.Join(lines, "\n")         // debug
-//	fmt.Println("ppo output: X" + output + "X") // debug
-
-
-
-//	output = strings.Join(lines, "\n")         // debug
-//	fmt.Println("pl output: X" + output + "X") // debug
-
-//	fmt.Print("Labels: ")
-//	fmt.Println(labels)
+	//	fmt.Print("Labels: ")
+	//	fmt.Println(labels)
 }
 
 func RemoveBlanks(lines []string) []string {
@@ -81,7 +77,7 @@ func ReplaceLabels(lines []string, labels map[string]int, program Program) (Prog
 				for key, val := range realLabels {
 					if subtokens[k] == key {
 						subtokens[k] = strconv.Itoa(val)
-//						fmt.Printf("Label Usage Replaced at line %d with %d\n", i, val)
+						//						fmt.Printf("Label Usage Replaced at line %d with %d\n", i, val)
 					}
 				}
 
@@ -120,7 +116,7 @@ func ParseLabels(lines []string) (parsed []string, labels map[string]int) {
 			}
 			label := lines[i][labelStart:labelEnd]
 			label = strings.TrimSpace(label)
-//			fmt.Printf("Found Label: %s at %d\n", label, i)
+			//			fmt.Printf("Found Label: %s at %d\n", label, i)
 			labels[label] = i
 			lines[i] = strings.TrimSpace(lines[i][labelEnd+1:])
 
@@ -129,7 +125,7 @@ func ParseLabels(lines []string) (parsed []string, labels map[string]int) {
 				i--
 			}
 
-//			fmt.Printf("Label Line Replaced: X%sX\n", lines[i])
+			//			fmt.Printf("Label Line Replaced: X%sX\n", lines[i])
 		}
 	}
 	return RemoveBlanks(lines), labels
@@ -198,7 +194,7 @@ func ParsePseudoOperations(cu *ControlUnit, lines []string) (parsed []string, pr
 				return nil, nil, errors.New("line " + strconv.Itoa(i) + " exceeds number of Vector Processing Elements") /// @todo accomodate BSS matrices wider than len(cu.PE)
 			}
 			if height+nextBssLocation > bytesPerPe {
-//				fmt.Printf("Error exceeds width: %d, nbss: %d, bytesPerPe: %d\n", width, nextBssLocation, bytesPerPe)
+				//				fmt.Printf("Error exceeds width: %d, nbss: %d, bytesPerPe: %d\n", width, nextBssLocation, bytesPerPe)
 				return nil, nil, errors.New("line " + strconv.Itoa(i) + " exceeds memory of Vector Processing Elements")
 			}
 
@@ -210,15 +206,15 @@ func ParsePseudoOperations(cu *ControlUnit, lines []string) (parsed []string, pr
 		}
 
 	}
-/*
-	fmt.Println("ParsedPseudoOps:")
-	fmt.Print("Lines: ")
-	fmt.Println(lines)
-	fmt.Print("linesPostPseu: ")
-	fmt.Println(lines[lastLine:])
-	fmt.Print("aliases: ")
-	fmt.Println(data)
-*/
+	/*
+		fmt.Println("ParsedPseudoOps:")
+		fmt.Print("Lines: ")
+		fmt.Println(lines)
+		fmt.Print("linesPostPseu: ")
+		fmt.Println(lines[lastLine:])
+		fmt.Print("aliases: ")
+		fmt.Println(data)
+	*/
 	lines = ReplacePseudoOpAliases(lines[lastLine:], data)
 	return lines, Program(pprogram), nil
 }

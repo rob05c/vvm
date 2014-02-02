@@ -272,7 +272,7 @@ func (p *PseudoProgram) DataOp(cu *ControlUnit, data byte) (address uint16) {
 	if nextDataPos == 0 {
 		bytesPerPe := len(cu.Memory) / (len(cu.PE) + 1)
 		nextDataPos = len(cu.PE) * bytesPerPe
-//		fmt.Printf("DataOp() Init nextDataPos: bytesperpe: %d pelen: %d pos: %d\n", bytesPerPe, len(cu.PE), nextDataPos) // debug
+		//		fmt.Printf("DataOp() Init nextDataPos: bytesperpe: %d pelen: %d pos: %d\n", bytesPerPe, len(cu.PE), nextDataPos) // debug
 	}
 	if nextDataPos == len(cu.Memory) {
 		panic("too much data, not enough memory") /// @todo handle error

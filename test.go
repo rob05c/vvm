@@ -5,7 +5,6 @@ import (
 	"strconv"
 )
 
-
 func testLoadMatrices(cu *ControlUnit) {
 	n := 3
 	a := createMatrix(n)
