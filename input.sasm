@@ -1,0 +1,26 @@
+lim equiv 0
+i equiv 1
+j equiv 2
+n data 3
+zero data 0
+a bss 3x3
+b bss 3x3
+c bss 3x3
+
+ldxi i,0
+
+ldxi j,0
+ldx lim,n
+loop:
+lod a,i
+mov 2,1
+bcast j
+lod b,j
+rmul
+add c,i
+sto c,i
+incx j,1
+cmpx j,lim,loop
+ldxi j,0
+incx i,1
+cmpx i,lim,loop

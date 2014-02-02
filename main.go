@@ -3,10 +3,143 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"flag"
+	"io/ioutil"
+//	"strings"
 )
 
+const DefaultIndexRegisters = 64
+const DefaultProcessingElements = 16
+const DefaultMemoryPerElement = 32
+
+var compileFile string
+var outputFile string
+func init() {
+	const (
+		compileDefault = ""
+		compileUsage = "file to compile"
+		outputDefault = "output.simd"
+		outputUsage = "output file for compiled binary"
+
+	)
+	flag.StringVar(&compileFile, "compile", compileDefault, compileUsage)
+	flag.StringVar(&compileFile, "c", compileDefault, compileUsage+" (shorthand)")
+	flag.StringVar(&outputFile, "output", outputDefault, outputUsage)
+	flag.StringVar(&outputFile, "o", outputDefault, outputUsage+" (shorthand)")
+}
+
 func main() {
-	cu := NewControlUnit(64, 16, 32)
+	flag.Parse()
+
+	cu := NewControlUnit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+
+	if len(compileFile) != 0 {
+		bytes, err := ioutil.ReadFile(compileFile)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		
+		input := string(bytes)
+		program, err := LexProgram(cu, input)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		
+		err = program.Save(outputFile)
+		if err != nil {
+			fmt.Println(err)
+		}
+		return
+	}
+
+	if flag.NArg() > 0 {
+		testLoadMatrices(cu) // debug
+
+		programFile := flag.Arg(0)
+		program, err := LoadProgram(programFile)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		cu.Run(program)
+		return
+	}
+
+	flag.PrintDefaults()
+	return
+}
+
+func testLoadMatrices(cu *ControlUnit) {
+	n := 3
+	a := createMatrix(n)
+	b := createMatrix(n)
+	//	c := createMatrix()
+	offset := int64(0)
+	loadMatrix(cu, a, offset)
+	offset += int64(len(a)) // row length
+	loadMatrix(cu, b, offset)
+}
+
+// @todo fix movA toR
+func testLexer() {
+	input := `
+lim equiv 0
+i equiv 1
+j equiv 2
+n data 3
+zero data 0
+a bss 3x3
+b bss 3x3
+c bss 3x3
+
+ldxi i,0
+
+ldxi j,0
+ldx lim,n
+loop:
+lod a,i
+mov 2,1
+bcast j
+lod b,j
+rmul
+add c,i
+sto c,i
+incx j,1
+cmpx j,lim,loop
+ldxi j,0
+incx i,1
+cmpx i,lim,loop
+`
+	cu := NewControlUnit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+
+	//	lines, program, err := ParsePseudoOperations(cu, lines)
+	program, err := LexProgram(cu, input)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Print("program: ")
+	fmt.Println(program)
+
+	fmt.Println("RUNNING")
+
+	n := 3
+	a := createMatrix(n)
+	b := createMatrix(n)
+	//	c := createMatrix()
+	offset := int64(0)
+	loadMatrix(cu, a, offset)
+	offset += int64(len(a)) // row length
+	loadMatrix(cu, b, offset)
+
+	cu.Run(program)
+	//	lines = ReplacePseudoOpAliases(lines, aliases)
+}
+
+func testMatrixMultiply() {
+	cu := NewControlUnit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
 	fmt.Println("You made a vector VM with " + strconv.Itoa(len(cu.PE)) + " processing elements.") //debug
 	n := 3
 	a := createMatrix(n)
@@ -23,8 +156,6 @@ func main() {
 	matrixMultiply(cu, byte(n))
 	fmt.Println("main() Final State")
 	cu.PrintMachine()
-
-	//	program := addInstruction(nil, isMov, []byte{4, 9, 15})
 }
 
 func createMatrix(n int) [][]int64 {
