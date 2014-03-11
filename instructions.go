@@ -24,6 +24,13 @@ type ControlUnit struct {
 	LengthRegister     int64 // necessary?
 	PE                 []ProcessingElement
 	Memory             []int64
+	Done               chan bool
+	Verbose            bool ///< whether to print verbose details during execution
+}
+
+type ByteTuple struct {
+	First  byte
+	Second byte
 }
 
 type ProcessingElement struct {
@@ -32,6 +39,50 @@ type ProcessingElement struct {
 	Index              int64
 	Enabled            bool
 	Memory             []int64
+
+	Lod  chan ByteTuple
+	Sto  chan ByteTuple
+	Add  chan ByteTuple
+	Sub  chan ByteTuple
+	Mul  chan ByteTuple
+	Div  chan ByteTuple
+	Mov  chan ByteTuple
+	Radd chan bool
+	Rsub chan bool
+	Rmul chan bool
+	Rdiv chan bool
+
+	Done chan bool ///< the PE writes to this when an instruction finishes.
+}
+
+func (pe *ProcessingElement) Run() {
+	for {
+		select {
+		case p := <-pe.Lod:
+			pe.DoLod(p.First, p.Second)
+		case p := <-pe.Sto:
+			pe.DoSto(p.First, p.Second)
+		case p := <-pe.Add:
+			pe.DoAdd(p.First, p.Second)
+		case p := <-pe.Sub:
+			pe.DoSub(p.First, p.Second)
+		case p := <-pe.Mul:
+			pe.DoMul(p.First, p.Second)
+		case p := <-pe.Div:
+			pe.DoDiv(p.First, p.Second)
+		case p := <-pe.Mov:
+			pe.DoMov(RegisterType(p.First), RegisterType(p.Second))
+		case <-pe.Radd:
+			pe.DoRadd()
+		case <-pe.Rsub:
+			pe.DoRsub()
+		case <-pe.Rmul:
+			pe.DoRmul()
+		case <-pe.Rdiv:
+			pe.DoRdiv()
+		}
+		pe.Done <- true
+	}
 }
 
 /*
@@ -44,20 +95,35 @@ func NewControlUnit(indexRegisters int, processingElements int, memoryBytesPerEl
 	cu.IndexRegister = make([]int64, indexRegisters, indexRegisters)
 	cu.Mask = make([]bool, processingElements, processingElements)
 	cu.PE = make([]ProcessingElement, processingElements, processingElements)
+	cu.Done = make(chan bool, processingElements)
 	for i, _ := range cu.PE {
 		mpos := i * memoryBytesPerElement
 		mlen := mpos + memoryBytesPerElement
-		cu.PE[i].Memory = cu.Memory[mpos:mlen]
-		cu.PE[i].Enabled = true
+		pe := &cu.PE[i]
+		pe.Memory = cu.Memory[mpos:mlen]
+		pe.Enabled = true
+		pe.Lod = make(chan ByteTuple)
+		pe.Sto = make(chan ByteTuple)
+		pe.Add = make(chan ByteTuple)
+		pe.Sub = make(chan ByteTuple)
+		pe.Mul = make(chan ByteTuple)
+		pe.Div = make(chan ByteTuple)
+		pe.Mov = make(chan ByteTuple)
+		pe.Radd = make(chan bool)
+		pe.Rsub = make(chan bool)
+		pe.Rmul = make(chan bool)
+		pe.Rdiv = make(chan bool)
+		pe.Done = cu.Done
+		go pe.Run()
 	}
 	return &cu
 }
 
-type InstructionType byte
+type OpCode byte
 
 const (
 	// control instructions
-	isLdx InstructionType = iota
+	isLdx OpCode = iota
 	isStx
 	isLdxi
 	isIncx
@@ -81,10 +147,10 @@ const (
 	isRmul
 	isRdiv
 
-	isInvalid InstructionType = ^InstructionType(0)
+	isInvalid OpCode = ^OpCode(0)
 )
 
-func StringToInstruction(s string) InstructionType {
+func StringToInstruction(s string) OpCode {
 	switch s {
 	case "ldx":
 		return isLdx
@@ -134,7 +200,7 @@ func StringToInstruction(s string) InstructionType {
 	return isInvalid
 }
 
-func (i InstructionType) String() string {
+func (i OpCode) String() string {
 	switch i {
 	case isLdx:
 		return "ldx"
@@ -184,7 +250,7 @@ func (i InstructionType) String() string {
 	return "NUL"
 }
 
-var InstructionParams = map[InstructionType]byte{
+var InstructionParams = map[OpCode]byte{
 	isLdx:    2,
 	isStx:    2,
 	isLdxi:   2,
@@ -210,7 +276,7 @@ var InstructionParams = map[InstructionType]byte{
 }
 
 /// @return whether the given instruction is a CU Memory instruction, i.e. using a 12-bit memory address
-func isMem(i InstructionType) bool {
+func isMem(i OpCode) bool {
 	return i == isLdx || i == isStx || i == isCload || i == isCstore
 }
 
@@ -221,7 +287,7 @@ func CreateProgram(p PseudoProgram) Program {
 }
 
 /// CU Memory addresses are 12 bits, so they're encoded a little differently
-func (p *Program) PushMem(instruction InstructionType, param byte, memParam uint16) {
+func (p *Program) PushMem(instruction OpCode, param byte, memParam uint16) {
 	byte1 := byte(instruction) | param<<6
 	byte2 := param>>2 | byte(memParam)<<4
 	byte3 := byte(memParam >> 4)
@@ -231,7 +297,7 @@ func (p *Program) PushMem(instruction InstructionType, param byte, memParam uint
 }
 
 /// Do NOT call this for CU Mem instructions - ldx, stx, cload, cstore. Call PushMem instead.
-func (p *Program) Push(instruction InstructionType, params []byte) {
+func (p *Program) Push(instruction OpCode, params []byte) {
 	byte1 := byte(instruction) | params[0]<<6
 	byte2 := params[0]>>2 | params[1]<<4
 	byte3 := params[1]>>4 | params[2]<<2
@@ -293,27 +359,35 @@ func (cu *ControlUnit) Run(program Program) {
 	cu.ProgramCounter = 0
 	for cu.ProgramCounter != int64(len(program)/3) {
 		pc := cu.ProgramCounter
-		instruction := InstructionType(program[pc*InstructionLength]) & 63 // 63 = 00111111
+		instruction := OpCode(program[pc*InstructionLength]) & 63 // 63 = 00111111
 		if !isMem(instruction) {
 			param1 := program[pc*InstructionLength]>>6 | program[pc*InstructionLength+1]<<2&63
 			param2 := program[pc*InstructionLength+1]>>4 | program[pc*InstructionLength+2]<<4&63
 			param3 := program[pc*InstructionLength+2] >> 2
 
-			fmt.Printf("Run() PC: %3d  IS: %5s  P1: %d  P2: %d  P3: %d\n", cu.ProgramCounter, instruction.String(), param1, param2, param3) // debug
+			if cu.Verbose {
+				fmt.Printf("Run() PC: %3d  IS: %5s  P1: %d  P2: %d  P3: %d\n", cu.ProgramCounter, instruction.String(), param1, param2, param3) // debug
+			}
 			cu.Execute(instruction, []byte{param1, param2, param3})
-			cu.PrintMachine() // debug
+			if cu.Verbose {
+				cu.PrintMachine() // debug
+			}
 		} else {
 			param := program[pc*InstructionLength]>>6 | program[pc*InstructionLength+1]<<2&63
 			memParam := uint16(program[pc*InstructionLength+1]>>4) | uint16(program[pc*InstructionLength+2])<<4
-			fmt.Printf("Run() PC: %3d  IS: %5s  P: %d  MP: %d\n", cu.ProgramCounter, instruction.String(), param, memParam) // debug
+			if cu.Verbose {
+				fmt.Printf("Run() PC: %3d  IS: %5s  P: %d  MP: %d\n", cu.ProgramCounter, instruction.String(), param, memParam) // debug
+			}
 			cu.ExecuteMem(instruction, param, memParam)
-			cu.PrintMachine() // debug
+			if cu.Verbose {
+				cu.PrintMachine() // debug
+			}
 		}
 		cu.ProgramCounter++
 	}
 }
 
-func (cu *ControlUnit) ExecuteMem(instruction InstructionType, param byte, memParam uint16) {
+func (cu *ControlUnit) ExecuteMem(instruction OpCode, param byte, memParam uint16) {
 	switch instruction {
 	case isLdx:
 		cu.Ldx(param, memParam)
@@ -327,7 +401,7 @@ func (cu *ControlUnit) ExecuteMem(instruction InstructionType, param byte, memPa
 }
 
 /// @param params must have as many members as the instruction takes parameters
-func (cu *ControlUnit) Execute(instruction InstructionType, params []byte) {
+func (cu *ControlUnit) Execute(instruction OpCode, params []byte) {
 	switch instruction {
 	case isLdxi:
 		cu.Ldxi(params[0], params[1])
@@ -519,39 +593,52 @@ func (cu *ControlUnit) Cbcast() {
 	}
 }
 
+// Block until all PE's are done
+func (cu *ControlUnit) Barrier() {
+	for i := 0; i != len(cu.PE); i++ {
+		<-cu.Done
+	}
+}
+
 //
 // vector instructions
 //
 func (cu *ControlUnit) Lod(a byte, idx byte) {
 	//	fmt.Printf("PE-Lod %d + %d (%d)\n", a, cu.IndexRegister[idx], idx)
 	for i, _ := range cu.PE {
-		cu.PE[i].Lod(a, byte(cu.IndexRegister[idx])) ///< @todo is this ok? Should we be loading the index register somewhere else?
+		cu.PE[i].Lod <- ByteTuple{a, byte(cu.IndexRegister[idx])} ///< @todo is this ok? Should we be loading the index register somewhere else?
 	}
+	cu.Barrier()
 }
 func (cu *ControlUnit) Sto(a byte, idx byte) {
 	for i, _ := range cu.PE {
-		cu.PE[i].Sto(a, byte(cu.IndexRegister[idx]))
+		cu.PE[i].Sto <- ByteTuple{a, byte(cu.IndexRegister[idx])}
 	}
+	cu.Barrier()
 }
 func (cu *ControlUnit) Add(a byte, idx byte) {
 	for i, _ := range cu.PE {
-		cu.PE[i].Add(a, byte(cu.IndexRegister[idx]))
+		cu.PE[i].Add <- ByteTuple{a, byte(cu.IndexRegister[idx])}
 	}
+	cu.Barrier()
 }
 func (cu *ControlUnit) Sub(a byte, idx byte) {
 	for i, _ := range cu.PE {
-		cu.PE[i].Sub(a, byte(cu.IndexRegister[idx]))
+		cu.PE[i].Sub <- ByteTuple{a, byte(cu.IndexRegister[idx])}
 	}
+	cu.Barrier()
 }
 func (cu *ControlUnit) Mul(a byte, idx byte) {
 	for i, _ := range cu.PE {
-		cu.PE[i].Mul(a, byte(cu.IndexRegister[idx]))
+		cu.PE[i].Mul <- ByteTuple{a, byte(cu.IndexRegister[idx])}
 	}
+	cu.Barrier()
 }
 func (cu *ControlUnit) Div(a byte, idx byte) {
 	for i, _ := range cu.PE {
-		cu.PE[i].Div(a, byte(cu.IndexRegister[idx]))
+		cu.PE[i].Div <- ByteTuple{a, byte(cu.IndexRegister[idx])}
 	}
+	cu.Barrier()
 }
 func (cu *ControlUnit) Bcast(idx byte) {
 	idx = byte(cu.IndexRegister[idx]) ///< @todo is this ok? Should we be loading the index register here?
@@ -563,57 +650,63 @@ func (cu *ControlUnit) Bcast(idx byte) {
 	}
 }
 func (cu *ControlUnit) Mov(from RegisterType, to RegisterType) {
+	/// @todo remove this? speed for safety?
 	if from == to {
 		return
 	}
 	for i, _ := range cu.PE {
-		cu.PE[i].Mov(from, to)
+		cu.PE[i].Mov <- ByteTuple{byte(from), byte(to)}
 	}
+	cu.Barrier()
 }
 
 func (cu *ControlUnit) Radd() {
 	for i, _ := range cu.PE {
-		cu.PE[i].Radd()
+		cu.PE[i].Radd <- true
 	}
+	cu.Barrier()
 }
 func (cu *ControlUnit) Rsub() {
 	for i, _ := range cu.PE {
-		cu.PE[i].Rsub()
+		cu.PE[i].Rsub <- true
 	}
+	cu.Barrier()
 }
 func (cu *ControlUnit) Rmul() {
 	for i, _ := range cu.PE {
-		cu.PE[i].Rmul()
+		cu.PE[i].Rmul <- true
 	}
+	cu.Barrier()
 }
 func (cu *ControlUnit) Rdiv() {
 	for i, _ := range cu.PE {
-		cu.PE[i].Rdiv()
+		cu.PE[i].Rdiv <- true
 	}
+	cu.Barrier()
 }
 
 ///
 /// PE (vector) instructions
 ///
-func (pe *ProcessingElement) Add(a byte, i byte) {
+func (pe *ProcessingElement) DoAdd(a byte, i byte) {
 	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister += pe.Memory[a+i]
 }
-func (pe *ProcessingElement) Sub(a byte, i byte) {
+func (pe *ProcessingElement) DoSub(a byte, i byte) {
 	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister -= pe.Memory[a+i]
 }
-func (pe *ProcessingElement) Mul(a byte, i byte) {
+func (pe *ProcessingElement) DoMul(a byte, i byte) {
 	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister *= pe.Memory[a+i]
 }
-func (pe *ProcessingElement) Div(a byte, i byte) {
+func (pe *ProcessingElement) DoDiv(a byte, i byte) {
 	if !pe.Enabled {
 		return
 	}
@@ -625,7 +718,7 @@ func (pe *ProcessingElement) Div(a byte, i byte) {
 
 // lod operation for individual PE
 // @todo change this to be signalled by a channel
-func (pe *ProcessingElement) Lod(a byte, i byte) {
+func (pe *ProcessingElement) DoLod(a byte, i byte) {
 	if !pe.Enabled {
 		return
 	}
@@ -635,7 +728,7 @@ func (pe *ProcessingElement) Lod(a byte, i byte) {
 
 // sto operation for individual PE
 // @todo change this to be signalled by a channel
-func (pe *ProcessingElement) Sto(a byte, i byte) {
+func (pe *ProcessingElement) DoSto(a byte, i byte) {
 	if !pe.Enabled {
 		return
 	}
@@ -643,7 +736,7 @@ func (pe *ProcessingElement) Sto(a byte, i byte) {
 }
 
 // @todo make this more efficient
-func (pe *ProcessingElement) Mov(from RegisterType, to RegisterType) {
+func (pe *ProcessingElement) DoMov(from RegisterType, to RegisterType) {
 	if !pe.Enabled {
 		return
 	}
@@ -665,25 +758,25 @@ func (pe *ProcessingElement) Mov(from RegisterType, to RegisterType) {
 		pe.ArithmeticRegister = fromVal
 	}
 }
-func (pe *ProcessingElement) Radd() {
+func (pe *ProcessingElement) DoRadd() {
 	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister += pe.RoutingRegister
 }
-func (pe *ProcessingElement) Rsub() {
+func (pe *ProcessingElement) DoRsub() {
 	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister -= pe.RoutingRegister
 }
-func (pe *ProcessingElement) Rmul() {
+func (pe *ProcessingElement) DoRmul() {
 	if !pe.Enabled {
 		return
 	}
 	pe.ArithmeticRegister *= pe.RoutingRegister
 }
-func (pe *ProcessingElement) Rdiv() {
+func (pe *ProcessingElement) DoRdiv() {
 	if !pe.Enabled {
 		return
 	}

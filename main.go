@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime"
+	"time"
 )
 
 const DefaultIndexRegisters = 64
@@ -13,6 +15,7 @@ const DefaultMemoryPerElement = 32
 
 var compileFile string
 var outputFile string
+var verbose bool
 
 func init() {
 	const (
@@ -20,28 +23,18 @@ func init() {
 		compileUsage   = "file to compile"
 		outputDefault  = "output.simd"
 		outputUsage    = "output file for compiled binary"
+		verboseDefault = false
+		verboseUsage   = "Verbose output, prints the state of the machine after each instruction"
 	)
 	flag.StringVar(&compileFile, "compile", compileDefault, compileUsage)
 	flag.StringVar(&compileFile, "c", compileDefault, compileUsage+" (shorthand)")
 	flag.StringVar(&outputFile, "output", outputDefault, outputUsage)
 	flag.StringVar(&outputFile, "o", outputDefault, outputUsage+" (shorthand)")
+	flag.BoolVar(&verbose, "verbose", verboseDefault, verboseUsage)
+	flag.BoolVar(&verbose, "v", verboseDefault, verboseUsage+" (shorthand)")
 }
 
-func main() {
-	flag.Parse()
-
-	cu := NewControlUnit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
-
-	if len(compileFile) != 0 {
-		compile(cu)
-		return
-	}
-
-	if flag.NArg() > 0 {
-		run(cu)
-		return
-	}
-
+func printUsage() {
 	exeName := os.Args[0]
 	fmt.Println("usage: ")
 	fmt.Println("\t" + exeName + " -c file-to-compile.sasm -o output-file")
@@ -51,7 +44,22 @@ func main() {
 	fmt.Println("example:\n\t" + exeName + " -c input.sasm")
 	fmt.Println("\t" + exeName + " -c input.sasm -o matrix_multiply.simd")
 	fmt.Println("\t" + exeName + " output.simd")
-	return
+}
+
+func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	flag.Parse()
+	cu := NewControlUnit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+	cu.Verbose = verbose
+	if len(compileFile) != 0 {
+		compile(cu)
+		return
+	}
+	if flag.NArg() <= 0 {
+		printUsage()
+		return
+	}
+	run(cu)
 }
 
 func compile(cu *ControlUnit) {
@@ -83,5 +91,13 @@ func run(cu *ControlUnit) {
 		fmt.Println(err)
 		return
 	}
+	start := time.Now()
 	cu.Run(program)
+	executionTime := time.Now().Sub(start)
+	fmt.Print("Program executed in ")
+	fmt.Print(executionTime)
+	fmt.Print(" on ")
+	fmt.Print(runtime.GOMAXPROCS(0))
+	fmt.Println(" cores.")
+	cu.PrintMachine()
 }
