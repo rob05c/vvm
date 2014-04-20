@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 )
 
 type Program []byte
@@ -58,7 +59,7 @@ type PseudoProgram Program
 /// @param cu necessary to get the initial data position, and to ensure we haven't exceeded memory
 var nextDataPos int
 
-func (p *PseudoProgram) DataOp(cu *ControlUnit, data byte) (address uint16) {
+func (p *PseudoProgram) DataOp(cu *ControlUnitData, data byte) (address uint16) {
 	// init next data position
 	if nextDataPos == 0 {
 		bytesPerPe := len(cu.Memory) / (len(cu.PE) + 1)
@@ -78,3 +79,16 @@ func (p *PseudoProgram) DataOp(cu *ControlUnit, data byte) (address uint16) {
 	return uint16(nextDataPos - 1) // return the value before it was incremented
 }
 
+type ProgramReader os.File
+
+func NewProgramReader(file string) (*ProgramReader, error) {
+	f, err := os.Open(file)
+	pr := (*ProgramReader)(f)
+	return pr, err
+}
+
+func (pr *ProgramReader) ReadInstruction(num int64) ([]byte, error) {
+	instruction := make([]byte, InstructionLength, InstructionLength)
+	_, err := (*os.File)(pr).ReadAt(instruction, num*InstructionLength)
+	return instruction, err
+}

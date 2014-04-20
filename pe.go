@@ -90,7 +90,6 @@ func (pe *ProcessingElement) DoLod(a byte, i byte) {
 		return
 	}
 	pe.ArithmeticRegister = pe.Memory[a+i]
-
 }
 
 // sto operation for individual PE

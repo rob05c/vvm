@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-func testLoadMatrices(cu *ControlUnit) {
+func testLoadMatrices(cu *ControlUnitData) {
 	n := 3
 	a := createMatrix(n)
 	b := createMatrix(n)
@@ -46,10 +46,10 @@ ldxi j,0
 incx i,1
 cmpx i,lim,loop
 `
-	cu := NewControlUnit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+	cu := NewControlUnit24bitPipelined(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
 
 	//	lines, program, err := ParsePseudoOperations(cu, lines)
-	program, err := LexProgram(cu, input)
+	program, err := LexProgram(cu.Data(), input)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -64,25 +64,25 @@ cmpx i,lim,loop
 	b := createMatrix(n)
 	//	c := createMatrix()
 	offset := int64(0)
-	loadMatrix(cu, a, offset)
+	loadMatrix(cu.Data(), a, offset)
 	offset += int64(len(a)) // row length
-	loadMatrix(cu, b, offset)
+	loadMatrix(cu.Data(), b, offset)
 
-	cu.Run(program)
+	cu.Run(input)
 	//	lines = ReplacePseudoOpAliases(lines, aliases)
 }
 
 func testMatrixMultiply() {
-	cu := NewControlUnit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
-	fmt.Println("You made a vector VM with " + strconv.Itoa(len(cu.PE)) + " processing elements.") //debug
+	cu := NewControlUnit24bitPipelined(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+	fmt.Println("You made a vector VM with " + strconv.Itoa(len(cu.Data().PE)) + " processing elements.") //debug
 	n := 3
 	a := createMatrix(n)
 	b := createMatrix(n)
 	//	c := createMatrix()
 	offset := int64(0)
-	loadMatrix(cu, a, offset)
+	loadMatrix(cu.Data(), a, offset)
 	offset += int64(len(a)) // row length
-	loadMatrix(cu, b, offset)
+	loadMatrix(cu.Data(), b, offset)
 
 	fmt.Println("main() Start State")
 	cu.PrintMachine()
@@ -131,7 +131,7 @@ func printMatrix(matrix [][]int64) {
 
 /// @todo account for matrices larger than the number of PEs
 /// @param offset the memory offset to begin at,
-func loadMatrix(cu *ControlUnit, matrix [][]int64, offset int64) {
+func loadMatrix(cu *ControlUnitData, matrix [][]int64, offset int64) {
 	for i, _ := range matrix {
 		if int64(i)+offset >= int64(len(cu.PE[0].Memory)) { // all PEs have the same amount of memory, so we just grab the first
 			break
@@ -150,7 +150,7 @@ func loadMatrix(cu *ControlUnit, matrix [][]int64, offset int64) {
 // and stores the result in the immediately following memory
 //
 /// @param n dimension of the matrices
-func matrixMultiply(cu *ControlUnit, matrixDimension byte) {
+func matrixMultiply(cu ControlUnit, matrixDimension byte) {
 	// indices into the CU Index Register
 	nextRegister := byte(0)
 	lim := nextRegister
@@ -168,10 +168,10 @@ func matrixMultiply(cu *ControlUnit, matrixDimension byte) {
 	c := b + matrixDimension
 
 	var pprogram PseudoProgram
-	n := pprogram.DataOp(cu, matrixDimension)
+	n := pprogram.DataOp(cu.Data(), matrixDimension)
 
 	//	zero :=
-	pprogram.DataOp(cu, 0)
+	pprogram.DataOp(cu.Data(), 0)
 
 	program := CreateProgram(pprogram)
 	program.Push(isLdxi, []byte{i, 0, 0})
@@ -201,10 +201,15 @@ func matrixMultiply(cu *ControlUnit, matrixDimension byte) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	program2, err := LoadProgram(file)
+	/*
+		program2, err := LoadProgram(file)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	*/
+	err = cu.Run(file)
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
-	cu.Run(program2)
 }

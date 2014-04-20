@@ -49,8 +49,9 @@ func printUsage() {
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	flag.Parse()
-	cu := NewControlUnit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
-	cu.Verbose = verbose
+	cu := NewControlUnit24bitPipelined(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+//	cu := NewControlUnit24bit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+	cu.Data().Verbose = verbose
 	if len(compileFile) != 0 {
 		compile(cu)
 		return
@@ -62,7 +63,7 @@ func main() {
 	run(cu)
 }
 
-func compile(cu *ControlUnit) {
+func compile(cu ControlUnit) {
 	bytes, err := ioutil.ReadFile(compileFile)
 	if err != nil {
 		fmt.Println(err)
@@ -70,7 +71,7 @@ func compile(cu *ControlUnit) {
 	}
 
 	input := string(bytes)
-	program, err := LexProgram(cu, input)
+	program, err := LexProgram(cu.Data(), input)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -82,17 +83,12 @@ func compile(cu *ControlUnit) {
 	}
 }
 
-func run(cu *ControlUnit) {
-	testLoadMatrices(cu) ///< @todo change sample input to load matrices within instructions, so this is unnecessary
+func run(cu ControlUnit) {
+	testLoadMatrices(cu.Data()) ///< @todo change sample input to load matrices within instructions, so this is unnecessary
 
 	programFile := flag.Arg(0)
-	program, err := LoadProgram(programFile)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
 	start := time.Now()
-	cu.Run(program)
+	cu.Run(programFile)
 	executionTime := time.Now().Sub(start)
 	fmt.Print("Program executed in ")
 	fmt.Print(executionTime)
@@ -100,4 +96,14 @@ func run(cu *ControlUnit) {
 	fmt.Print(runtime.GOMAXPROCS(0))
 	fmt.Println(" cores.")
 	cu.PrintMachine()
+	/*
+		pr, err := NewProgramReader(programFile)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		for instruction, err := pr.ReadInstruction(); err == nil; instruction, err = pr.ReadInstruction() {
+			fmt.Println(instruction)
+		}
+	*/
 }
