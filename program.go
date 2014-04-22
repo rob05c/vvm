@@ -8,9 +8,6 @@ import (
 
 type Program []byte
 
-func CreateProgram(p PseudoProgram) Program {
-	return Program(p)
-}
 
 /// CU Memory addresses are 12 bits, so they're encoded a little differently
 func (p *Program) PushMem(instruction OpCode, param byte, memParam uint16) {
@@ -47,7 +44,6 @@ func LoadProgram(file string) (Program, error) {
 	return ioutil.ReadFile(file)
 }
 
-type PseudoProgram Program
 
 /// Data Pseudo-Operation
 ///
@@ -59,7 +55,7 @@ type PseudoProgram Program
 /// @param cu necessary to get the initial data position, and to ensure we haven't exceeded memory
 var nextDataPos int
 
-func (p *PseudoProgram) DataOp(cu *ControlUnitData, data byte) (address uint16) {
+func (p *Program) DataOp(cu *ControlUnitData, data byte) (address uint16) {
 	// init next data position
 	if nextDataPos == 0 {
 		bytesPerPe := len(cu.Memory) / (len(cu.PE) + 1)

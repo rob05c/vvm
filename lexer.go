@@ -140,7 +140,7 @@ func ParsePseudoOperations(cu *ControlUnitData, lines []string) (parsed []string
 	//	bss := make(map[string]int) //map[alias] pe_memory_location
 
 	var lastLine int
-	var pprogram PseudoProgram
+	var pprogram Program
 
 	nextBssLocation := 0
 

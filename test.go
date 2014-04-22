@@ -167,13 +167,12 @@ func matrixMultiply(cu ControlUnit, matrixDimension byte) {
 	b := a + matrixDimension
 	c := b + matrixDimension
 
-	var pprogram PseudoProgram
-	n := pprogram.DataOp(cu.Data(), matrixDimension)
+	var program Program
+	n := program.DataOp(cu.Data(), matrixDimension)
 
 	//	zero :=
-	pprogram.DataOp(cu.Data(), 0)
+	program.DataOp(cu.Data(), 0)
 
-	program := CreateProgram(pprogram)
 	program.Push(isLdxi, []byte{i, 0, 0})
 	program.Push(isLdxi, []byte{j, 0, 0})
 
