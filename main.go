@@ -12,10 +12,21 @@ import (
 const DefaultIndexRegisters = 64
 const DefaultProcessingElements = 16
 const DefaultMemoryPerElement = 32
+type ArchitectureType uint
+const (
+	at24bit = ArchitectureType(iota)
+	at24bitpipelined
+	at32bit
+	at64bit
+)
 
 var compileFile string
 var outputFile string
 var verbose bool
+var archString string
+var arch ArchitectureType
+
+
 
 func init() {
 	const (
@@ -25,6 +36,8 @@ func init() {
 		outputUsage    = "output file for compiled binary"
 		verboseDefault = false
 		verboseUsage   = "Verbose output, prints the state of the machine after each instruction"
+		archDefault    = "24bit"
+		archUsage      = "Machine architecture: 24bit, 24bitpipelined, 32bit, 64bit."
 	)
 	flag.StringVar(&compileFile, "compile", compileDefault, compileUsage)
 	flag.StringVar(&compileFile, "c", compileDefault, compileUsage+" (shorthand)")
@@ -32,6 +45,8 @@ func init() {
 	flag.StringVar(&outputFile, "o", outputDefault, outputUsage+" (shorthand)")
 	flag.BoolVar(&verbose, "verbose", verboseDefault, verboseUsage)
 	flag.BoolVar(&verbose, "v", verboseDefault, verboseUsage+" (shorthand)")
+	flag.StringVar(&archString, "arch", archDefault, archUsage)
+	flag.StringVar(&archString, "a", archDefault, archUsage+" (shorthand)");
 }
 
 func printUsage() {
@@ -46,11 +61,36 @@ func printUsage() {
 	fmt.Println("\t" + exeName + " output.simd")
 }
 
+func parseEnumArgs() {
+	switch archString {
+	case "24bit":
+		arch = at24bit
+	case "24bitpipelined":
+		arch = at24bitpipelined
+	case "32bit":
+		arch = at32bit
+	case "64bit":
+		arch = at64bit
+	default:
+		arch = at24bit
+	}
+}
+
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	flag.Parse()
-	cu := NewControlUnit24bitPipelined(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
-//	cu := NewControlUnit24bit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+	parseEnumArgs()
+
+	var cu ControlUnit
+	switch arch {
+	case at24bit:
+		cu = NewControlUnit24bit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+	case at24bitpipelined:
+		cu = NewControlUnit24bitPipelined(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+	default: // @todo remove this when 32 and 64 bit are implemented
+		cu = NewControlUnit24bit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+	}
+
 	cu.Data().Verbose = verbose
 	if len(compileFile) != 0 {
 		compile(cu)
