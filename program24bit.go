@@ -8,7 +8,6 @@ import (
 
 type Program24bit []byte
 
-
 /// CU Memory addresses are 12 bits, so they're encoded a little differently
 func (p *Program24bit) PushMem(instruction OpCode, param byte, memParam uint16) {
 	byte1 := byte(instruction) | param<<6
@@ -30,8 +29,8 @@ func (p *Program24bit) Push(instruction OpCode, params []byte) {
 }
 
 // returns the number of instructions. Use for creating Labels and Jump positions
-func (p *Program24bit) Size() byte {
-	return byte(len(*p) / 3)
+func (p Program24bit) Size() byte {
+	return byte(len(p) / 3)
 }
 
 /// This doesn't really compile. The "compiling" to binary has already been done by the lexer
