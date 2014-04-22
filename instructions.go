@@ -177,4 +177,3 @@ func isMem(i OpCode) bool {
 	return i == isLdx || i == isStx || i == isCload || i == isCstore
 }
 
-const InstructionLength = 3 ///< instructions are 3 bytes wide, or 24 bits

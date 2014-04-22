@@ -6,6 +6,8 @@ import (
 	"os"
 )
 
+const InstructionLength24bit = 3 ///< instructions are 3 bytes wide, or 24 bits
+
 type Program24bit []byte
 
 func NewProgram24bit() *Program24bit {
@@ -39,7 +41,7 @@ func (p Program24bit) Size() byte {
 }
 
 func (p Program24bit) At(index int64) []byte {
-	return p[index*InstructionLength:index*InstructionLength+InstructionLength]
+	return p[index*InstructionLength24bit:index*InstructionLength24bit+InstructionLength24bit]
 }
 
 /// This doesn't really compile. The "compiling" to binary has already been done by the lexer
@@ -94,7 +96,7 @@ func NewProgramReader24bit(file string) (*ProgramReader24bit, error) {
 }
 
 func (pr *ProgramReader24bit) ReadInstruction(num int64) ([]byte, error) {
-	instruction := make([]byte, InstructionLength, InstructionLength)
-	_, err := (*os.File)(pr).ReadAt(instruction, num*InstructionLength)
+	instruction := make([]byte, InstructionLength24bit, InstructionLength24bit)
+	_, err := (*os.File)(pr).ReadAt(instruction, num*InstructionLength24bit)
 	return instruction, err
 }

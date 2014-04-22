@@ -8,4 +8,3 @@ type Program interface {
 	DataOp(cu *ControlUnitData, data byte) (address uint16)
 	At(index int64) []byte
 }
-
