@@ -10,7 +10,7 @@ import (
 /// NOTE Programs must be run on the same CU they are compiled for.
 ///      That is, with the same registers, elements, and memory.
 ///      Otherwise, memory layouts will not line up and the program will explode.
-func LexProgram(cu *ControlUnitData, source string) (Program24bit, error) {
+func LexProgram(cu *ControlUnitData, source string) (Program, error) {
 	lines := RemoveBlanks(strings.Split(source, "\n"))
 	lines, program, err := ParsePseudoOperations(cu, lines)
 	if err != nil {
@@ -44,7 +44,7 @@ func RemoveBlanks(lines []string) []string {
 }
 
 /// @todo handle movR toA etc.
-func ReplaceLabels(lines []string, labels map[string]int, program Program24bit) (Program24bit, error) {
+func ReplaceLabels(lines []string, labels map[string]int, program Program) (Program, error) {
 	//	instructionSize := 3 ///< @todo don't hardcode instruction size here. Magic numbers bad!
 	realLabels := make(map[string]int)
 	for i, _ := range lines {
@@ -132,12 +132,14 @@ func ParseLabels(lines []string) (parsed []string, labels map[string]int) {
 }
 
 /// @todo accomodate BSS matrices larger than len(cu.PE)
-func ParsePseudoOperations(cu *ControlUnitData, lines []string) (parsed []string, program Program24bit, err error) {
+func ParsePseudoOperations(cu *ControlUnitData, lines []string) (parsed []string, program Program, err error) {
 	bytesPerPe := len(cu.Memory) / (len(cu.PE) + 1)
 
 	data := make(map[string]int) // map[alias] cu_memory_location
 	//	equiv := make(map[string]int) //map[alias] constant (usually to a CU IndexRegister location)
 	//	bss := make(map[string]int) //map[alias] pe_memory_location
+
+	program = NewProgram24bit()
 
 	var lastLine int
 

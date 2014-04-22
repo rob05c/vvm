@@ -8,6 +8,11 @@ import (
 
 type Program24bit []byte
 
+func NewProgram24bit() *Program24bit {
+	p := make(Program24bit, 0)
+	return &p
+}
+
 /// CU Memory addresses are 12 bits, so they're encoded a little differently
 func (p *Program24bit) PushMem(instruction OpCode, param byte, memParam uint16) {
 	byte1 := byte(instruction) | param<<6
@@ -33,14 +38,20 @@ func (p Program24bit) Size() byte {
 	return byte(len(p) / 3)
 }
 
+func (p Program24bit) At(index int64) []byte {
+	return p[index*InstructionLength:index*InstructionLength+InstructionLength]
+}
+
 /// This doesn't really compile. The "compiling" to binary has already been done by the lexer
 /// This just writes the byte array to a file
 func (p Program24bit) Save(file string) error {
 	return ioutil.WriteFile(file, p, 0xFFF)
 }
 
-func LoadProgram24bit(file string) (Program24bit, error) {
-	return ioutil.ReadFile(file)
+func LoadProgram24bit(file string) (Program, error) {
+	p, err := ioutil.ReadFile(file)
+	pp := Program24bit(p)
+	return Program(&pp), err
 }
 
 

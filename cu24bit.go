@@ -36,28 +36,29 @@ func (cu *ControlUnit24bit) Run(file string) error {
 	}
 
 	cu.ProgramCounter = 0
-	for cu.ProgramCounter != int64(len(program)/3) {
+	for cu.ProgramCounter != int64(program.Size()) {
 		pc := cu.ProgramCounter
-		instruction := OpCode(program[pc*InstructionLength]) & 63 // 63 = 00111111
-		if !isMem(instruction) {
-			param1 := program[pc*InstructionLength]>>6 | program[pc*InstructionLength+1]<<2&63
-			param2 := program[pc*InstructionLength+1]>>4 | program[pc*InstructionLength+2]<<4&63
-			param3 := program[pc*InstructionLength+2] >> 2
+		inst := program.At(pc)
+		op := OpCode(inst[0]) & 63 // 63 = 00111111
+		if !isMem(op) {
+			param1 := inst[0]>>6 | inst[1]<<2&63
+			param2 := inst[1]>>4 | inst[2]<<4&63
+			param3 := inst[2] >> 2
 
 			if cu.data.Verbose {
-				fmt.Printf("Run() PC: %3d  IS: %5s  P1: %d  P2: %d  P3: %d\n", cu.ProgramCounter, instruction.String(), param1, param2, param3) // debug
+				fmt.Printf("Run() PC: %3d  IS: %5s  P1: %d  P2: %d  P3: %d\n", cu.ProgramCounter, op.String(), param1, param2, param3) // debug
 			}
-			cu.Execute(instruction, []byte{param1, param2, param3})
+			cu.Execute(op, []byte{param1, param2, param3})
 			if cu.data.Verbose {
 				cu.data.PrintMachine() // debug
 			}
 		} else {
-			param := program[pc*InstructionLength]>>6 | program[pc*InstructionLength+1]<<2&63
-			memParam := uint16(program[pc*InstructionLength+1]>>4) | uint16(program[pc*InstructionLength+2])<<4
+			param := inst[0]>>6 | inst[1]<<2&63
+			memParam := uint16(inst[1]>>4) | uint16(inst[2])<<4
 			if cu.data.Verbose {
-				fmt.Printf("Run() PC: %3d  IS: %5s  P: %d  MP: %d\n", cu.ProgramCounter, instruction.String(), param, memParam) // debug
+				fmt.Printf("Run() PC: %3d  IS: %5s  P: %d  MP: %d\n", cu.ProgramCounter, op.String(), param, memParam) // debug
 			}
-			cu.ExecuteMem(instruction, param, memParam)
+			cu.ExecuteMem(op, param, memParam)
 			if cu.data.Verbose {
 				cu.data.PrintMachine() // debug
 			}
@@ -67,8 +68,8 @@ func (cu *ControlUnit24bit) Run(file string) error {
 	return nil
 }
 
-func (cu *ControlUnit24bit) ExecuteMem(instruction OpCode, param byte, memParam uint16) {
-	switch instruction {
+func (cu *ControlUnit24bit) ExecuteMem(op OpCode, param byte, memParam uint16) {
+	switch op {
 	case isLdx:
 		cu.Ldx(param, memParam)
 	case isStx:
