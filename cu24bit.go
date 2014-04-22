@@ -30,7 +30,7 @@ func (cu *ControlUnit24bit) PrintMachine() {
 
 func (cu *ControlUnit24bit) Run(file string) error {
 
-	program, err := LoadProgram(file)
+	program, err := LoadProgram24bit(file)
 	if err != nil {
 		return err
 	}

@@ -167,7 +167,7 @@ func matrixMultiply(cu ControlUnit, matrixDimension byte) {
 	b := a + matrixDimension
 	c := b + matrixDimension
 
-	var program Program
+	var program Program24bit
 	n := program.DataOp(cu.Data(), matrixDimension)
 
 	//	zero :=
