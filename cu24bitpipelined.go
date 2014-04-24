@@ -94,7 +94,7 @@ func getPcChange(fetchWaitForPcChange <-chan bool, fetchPcChange <-chan int64, p
 	}
 }
 /// INVARIANT fetchWaitForPcChange MUST be passed BEFORE decodePause
-func Fetcher(pr *ProgramReader24bit,
+func Fetcher(pr ProgramReader,
 	decode chan<- []byte,
 	fetchWaitForPcChange <-chan bool,
 	fetchPcChange <-chan int64,

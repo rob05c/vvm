@@ -8,3 +8,7 @@ type Program interface {
 	DataOp(cu *ControlUnitData, data byte) (address uint16)
 	At(index int64) []byte
 }
+
+type ProgramReader interface {
+	ReadInstruction(num int64) ([]byte, error)
+}

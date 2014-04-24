@@ -48,8 +48,10 @@ cmpx i,lim,loop
 `
 	cu := NewControlUnit24bitPipelined(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
 
-	//	lines, program, err := ParsePseudoOperations(cu, lines)
-	program, err := LexProgram(cu.Data(), input)
+	//	lines, program, err := ParsePseudoOperations(cu,
+	//	lines)
+	program := NewProgram24bit()
+	err := LexProgram(cu.Data(), input, program)
 	if err != nil {
 		fmt.Println(err)
 		return

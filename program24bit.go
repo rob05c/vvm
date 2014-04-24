@@ -89,7 +89,7 @@ func (p *Program24bit) DataOp(cu *ControlUnitData, data byte) (address uint16) {
 
 type ProgramReader24bit os.File
 
-func NewProgramReader24bit(file string) (*ProgramReader24bit, error) {
+func NewProgramReader24bit(file string) (ProgramReader, error) {
 	f, err := os.Open(file)
 	pr := (*ProgramReader24bit)(f)
 	return pr, err

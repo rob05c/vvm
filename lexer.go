@@ -10,11 +10,11 @@ import (
 /// NOTE Programs must be run on the same CU they are compiled for.
 ///      That is, with the same registers, elements, and memory.
 ///      Otherwise, memory layouts will not line up and the program will explode.
-func LexProgram(cu *ControlUnitData, source string) (Program, error) {
+func LexProgram(cu *ControlUnitData, source string, program Program) error {
 	lines := RemoveBlanks(strings.Split(source, "\n"))
-	lines, program, err := ParsePseudoOperations(cu, lines)
+	lines, err := ParsePseudoOperations(cu, lines, program)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	lines, labels := ParseLabels(lines)
 	return ReplaceLabels(lines, labels, program)
@@ -44,7 +44,7 @@ func RemoveBlanks(lines []string) []string {
 }
 
 /// @todo handle movR toA etc.
-func ReplaceLabels(lines []string, labels map[string]int, program Program) (Program, error) {
+func ReplaceLabels(lines []string, labels map[string]int, program Program) (error) {
 	//	instructionSize := 3 ///< @todo don't hardcode instruction size here. Magic numbers bad!
 	realLabels := make(map[string]int)
 	for i, _ := range lines {
@@ -60,12 +60,12 @@ func ReplaceLabels(lines []string, labels map[string]int, program Program) (Prog
 
 		tokens := strings.Fields(lines[i])
 		if len(tokens) == 0 {
-			return nil, errors.New("malformed line a " + strconv.Itoa(i))
+			return errors.New("malformed line a " + strconv.Itoa(i))
 		}
 
 		op := StringToInstruction(strings.ToLower(tokens[0]))
 		if op == isInvalid {
-			return nil, errors.New("malformed line b " + strconv.Itoa(i))
+			return errors.New("malformed line b " + strconv.Itoa(i))
 		}
 
 		tokens = tokens[1:]
@@ -83,7 +83,7 @@ func ReplaceLabels(lines []string, labels map[string]int, program Program) (Prog
 
 				val, err := strconv.Atoi(subtokens[k])
 				if err != nil {
-					return nil, errors.New("malformed line c " + strconv.Itoa(i) + " : " + subtokens[k])
+					return errors.New("malformed line c " + strconv.Itoa(i) + " : " + subtokens[k])
 				}
 				params = append(params, val)
 			}
@@ -103,7 +103,7 @@ func ReplaceLabels(lines []string, labels map[string]int, program Program) (Prog
 			program.Push(op, bytes)
 		}
 	}
-	return program, nil
+	return nil
 }
 
 func ParseLabels(lines []string) (parsed []string, labels map[string]int) {
@@ -132,14 +132,12 @@ func ParseLabels(lines []string) (parsed []string, labels map[string]int) {
 }
 
 /// @todo accomodate BSS matrices larger than len(cu.PE)
-func ParsePseudoOperations(cu *ControlUnitData, lines []string) (parsed []string, program Program, err error) {
+func ParsePseudoOperations(cu *ControlUnitData, lines []string, program Program) (parsed []string, err error) {
 	bytesPerPe := len(cu.Memory) / (len(cu.PE) + 1)
 
 	data := make(map[string]int) // map[alias] cu_memory_location
 	//	equiv := make(map[string]int) //map[alias] constant (usually to a CU IndexRegister location)
 	//	bss := make(map[string]int) //map[alias] pe_memory_location
-
-	program = NewProgram24bit()
 
 	var lastLine int
 
@@ -157,7 +155,7 @@ func ParsePseudoOperations(cu *ControlUnitData, lines []string) (parsed []string
 		}
 
 		if len(tokens) < 3 {
-			return nil, nil, errors.New("malformed line d " + strconv.Itoa(i))
+			return nil, errors.New("malformed line d " + strconv.Itoa(i))
 		}
 
 		alias := strings.ToLower(tokens[0])
@@ -168,42 +166,42 @@ func ParsePseudoOperations(cu *ControlUnitData, lines []string) (parsed []string
 		case "data":
 			val, err := strconv.Atoi(strVal)
 			if err != nil {
-				return nil, nil, errors.New("malformed line e " + strconv.Itoa(i))
+				return nil, errors.New("malformed line e " + strconv.Itoa(i))
 			}
 			location := program.DataOp(cu, byte(val))
 			data[alias] = int(location)
 		case "equiv":
 			val, err := strconv.Atoi(strVal)
 			if err != nil {
-				return nil, nil, errors.New("malformed line f " + strconv.Itoa(i))
+				return nil, errors.New("malformed line f " + strconv.Itoa(i))
 			}
 			data[alias] = val
 		case "bss":
 			vals := strings.Split(strVal, "x")
 			if len(vals) != 2 {
-				return nil, nil, errors.New("malformed line g " + strconv.Itoa(i))
+				return nil, errors.New("malformed line g " + strconv.Itoa(i))
 			}
 			width, err := strconv.Atoi(vals[0])
 			if err != nil {
-				return nil, nil, errors.New("malformed line h " + strconv.Itoa(i))
+				return nil, errors.New("malformed line h " + strconv.Itoa(i))
 			}
 			height, err := strconv.Atoi(vals[1])
 			if err != nil {
-				return nil, nil, errors.New("malformed line i " + strconv.Itoa(i))
+				return nil, errors.New("malformed line i " + strconv.Itoa(i))
 			}
 			if width > len(cu.PE) {
-				return nil, nil, errors.New("line " + strconv.Itoa(i) + " exceeds number of Vector Processing Elements") /// @todo accomodate BSS matrices wider than len(cu.PE)
+				return nil, errors.New("line " + strconv.Itoa(i) + " exceeds number of Vector Processing Elements") /// @todo accomodate BSS matrices wider than len(cu.PE)
 			}
 			if height+nextBssLocation > bytesPerPe {
 				//				fmt.Printf("Error exceeds width: %d, nbss: %d, bytesPerPe: %d\n", width, nextBssLocation, bytesPerPe)
-				return nil, nil, errors.New("line " + strconv.Itoa(i) + " exceeds memory of Vector Processing Elements")
+				return nil, errors.New("line " + strconv.Itoa(i) + " exceeds memory of Vector Processing Elements")
 			}
 
 			data[alias] = nextBssLocation
 			nextBssLocation += height
 
 		default:
-			return nil, nil, errors.New("malformed line j " + strconv.Itoa(i))
+			return nil, errors.New("malformed line j " + strconv.Itoa(i))
 		}
 
 	}
@@ -217,7 +215,7 @@ func ParsePseudoOperations(cu *ControlUnitData, lines []string) (parsed []string
 		fmt.Println(data)
 	*/
 	lines = ReplacePseudoOpAliases(lines[lastLine:], data)
-	return lines, program, nil
+	return lines, nil
 }
 
 func ReplacePseudoOpAliases(lines []string, aliases map[string]int) []string {

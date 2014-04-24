@@ -87,13 +87,15 @@ func main() {
 		cu = NewControlUnit24bit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
 	case at24bitpipelined:
 		cu = NewControlUnit24bitPipelined(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+	case at32bit:
+		cu = NewControlUnit32bit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
 	default: // @todo remove this when 32 and 64 bit are implemented
 		cu = NewControlUnit24bit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
 	}
 
 	cu.Data().Verbose = verbose
 	if len(compileFile) != 0 {
-		compile(cu)
+		compile(cu, arch)
 		return
 	}
 	if flag.NArg() <= 0 {
@@ -103,7 +105,7 @@ func main() {
 	run(cu)
 }
 
-func compile(cu ControlUnit) {
+func compile(cu ControlUnit, arch ArchitectureType) {
 	bytes, err := ioutil.ReadFile(compileFile)
 	if err != nil {
 		fmt.Println(err)
@@ -111,7 +113,18 @@ func compile(cu ControlUnit) {
 	}
 
 	input := string(bytes)
-	program, err := LexProgram(cu.Data(), input)
+	var program Program
+	switch arch {
+	case at24bit:
+	fallthrough
+	case at24bitpipelined:
+		program = NewProgram24bit()
+	case at32bit:
+		program = NewProgram32bit()
+	default:
+		program = NewProgram24bit()
+	}
+	err = LexProgram(cu.Data(), input, program)
 	if err != nil {
 		fmt.Println(err)
 		return
