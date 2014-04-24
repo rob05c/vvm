@@ -36,8 +36,8 @@ func (p *Program24bit) Push(instruction OpCode, params []byte) {
 }
 
 // returns the number of instructions. Use for creating Labels and Jump positions
-func (p Program24bit) Size() byte {
-	return byte(len(p) / 3)
+func (p Program24bit) Size() int64 {
+	return int64(len(p) / 3)
 }
 
 func (p Program24bit) At(index int64) []byte {

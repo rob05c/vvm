@@ -180,7 +180,7 @@ func matrixMultiply(cu ControlUnit, matrixDimension byte) {
 
 	program.PushMem(isLdx, lim, n)
 
-	labelLoop := program.Size()
+	labelLoop := byte(program.Size())
 	program.Push(isLod, []byte{a, i, 0})
 	program.Push(isMov, []byte{peArithmetic, peRouting, 0})
 	program.Push(isBcast, []byte{j, 0, 0})
