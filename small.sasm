@@ -1,0 +1,59 @@
+lim equiv 0
+i equiv 1
+j equiv 2
+x equiv 3
+n data 3
+zero data 0
+a bss 3x3
+b bss 3x3
+c bss 3x3
+scratch equiv 28
+
+ldxi i,0
+ldx lim,n
+initloop:
+ldxi x,1
+stx x,scratch
+cload scratch
+cbcast
+radd
+sto 0,i
+incx i,1
+cmpx i,lim,initloop
+
+ldxi x,0
+stx x,scratch
+cload scratch
+cbcast
+rmul
+
+mulx lim,2
+initloopb:
+ldxi x,1
+stx x,scratch
+cload scratch
+cbcast
+radd
+sto 0,i
+incx i,1
+cmpx i,lim,initloopb
+
+ldxi x,0
+stx x,scratch
+
+ldxi i,0
+ldxi j,0
+ldx lim,n
+loop:
+lod a,i
+mov 2,1
+bcast j
+lod b,j
+rmul
+add c,i
+sto c,i
+incx j,1
+cmpx j,lim,loop
+ldxi j,0
+incx i,1
+cmpx i,lim,loop

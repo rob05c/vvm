@@ -262,7 +262,7 @@ func Executor(cu *ControlUnit24bitPipelined,
 	}
 }
 
-func NewControlUnit24bitPipelined(indexRegisters int, processingElements int, memoryBytesPerElement int) ControlUnit {
+func NewControlUnit24bitPipelined(indexRegisters uint, processingElements uint, memoryBytesPerElement uint) ControlUnit {
 	var cu ControlUnit24bitPipelined
 	cu.data = NewControlUnitData(indexRegisters, processingElements, memoryBytesPerElement)
 	cu.FetchPcChangeChan = make(chan int64)

@@ -25,7 +25,7 @@ type ControlUnitData struct {
 /*
 The Memory is 1 "BytesPerElement" larger than the number of PEs. This is so the CU may have its own memory.
 */
-func NewControlUnitData(indexRegisters int, processingElements int, memoryBytesPerElement int) *ControlUnitData {
+func NewControlUnitData(indexRegisters uint, processingElements uint, memoryBytesPerElement uint) *ControlUnitData {
 	var d ControlUnitData
 	d.Verbose = true;
 	memory := memoryBytesPerElement * (processingElements + 1) // +1 so the CU has its own memory
@@ -36,8 +36,8 @@ func NewControlUnitData(indexRegisters int, processingElements int, memoryBytesP
 	d.Done = make(chan bool, processingElements)
 
 	for i, _ := range d.PE {
-		mpos := i * memoryBytesPerElement
-		mlen := mpos + memoryBytesPerElement
+		mpos := i * int(memoryBytesPerElement)
+		mlen := mpos + int(memoryBytesPerElement)
 		pe := &d.PE[i]
 		pe.Memory = d.Memory[mpos:mlen]
 		pe.Enabled = true

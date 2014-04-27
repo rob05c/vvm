@@ -9,15 +9,11 @@ import (
 	"time"
 )
 
-const DefaultIndexRegisters = 64
-const DefaultProcessingElements = 16
-const DefaultMemoryPerElement = 32
 type ArchitectureType uint
 const (
 	at24bit = ArchitectureType(iota)
 	at24bitpipelined
 	at32bit
-	at64bit
 )
 
 var compileFile string
@@ -25,8 +21,9 @@ var outputFile string
 var verbose bool
 var archString string
 var arch ArchitectureType
-
-
+var memoryPerPe uint
+var numPe uint
+var numIndexRegisters uint
 
 func init() {
 	const (
@@ -37,7 +34,16 @@ func init() {
 		verboseDefault = false
 		verboseUsage   = "Verbose output, prints the state of the machine after each instruction"
 		archDefault    = "24bit"
-		archUsage      = "Machine architecture: 24bit, 24bitpipelined, 32bit, 64bit."
+		archUsage      = "Machine architecture: 24bit, 24bitpipelined, 32bit."
+		peMemDefault   = 64
+		peMemUsage     = `Memory per processing element. 
+        CAUTION: seting more than the instruction set can address will result in undefined behavior.`
+		numPeDefault   = 32
+		numPeUsage     = `Number of processing elements. 
+        CAUTION: seting more than the instruction set can address will result in undefined behavior.`
+		numIndexRegistersDefault   = 64
+		numIndexRegistersUsage = `Number of index registers. 
+        CAUTION: seting more than the instruction set can address will result in undefined behavior.`
 	)
 	flag.StringVar(&compileFile, "compile", compileDefault, compileUsage)
 	flag.StringVar(&compileFile, "c", compileDefault, compileUsage+" (shorthand)")
@@ -46,7 +52,10 @@ func init() {
 	flag.BoolVar(&verbose, "verbose", verboseDefault, verboseUsage)
 	flag.BoolVar(&verbose, "v", verboseDefault, verboseUsage+" (shorthand)")
 	flag.StringVar(&archString, "arch", archDefault, archUsage)
-	flag.StringVar(&archString, "a", archDefault, archUsage+" (shorthand)");
+	flag.StringVar(&archString, "a", archDefault, archUsage+" (shorthand)")
+	flag.UintVar(&memoryPerPe, "pemem", peMemDefault, peMemUsage)
+	flag.UintVar(&numPe, "numpe", numPeDefault, numPeUsage)
+	flag.UintVar(&numIndexRegisters, "indexregisters", numIndexRegistersDefault, numIndexRegistersUsage)
 }
 
 func printUsage() {
@@ -69,8 +78,6 @@ func parseEnumArgs() {
 		arch = at24bitpipelined
 	case "32bit":
 		arch = at32bit
-	case "64bit":
-		arch = at64bit
 	default:
 		arch = at24bit
 	}
@@ -84,13 +91,13 @@ func main() {
 	var cu ControlUnit
 	switch arch {
 	case at24bit:
-		cu = NewControlUnit24bit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+		cu = NewControlUnit24bit(numIndexRegisters, numPe, memoryPerPe)
 	case at24bitpipelined:
-		cu = NewControlUnit24bitPipelined(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+		cu = NewControlUnit24bitPipelined(numIndexRegisters, numPe, memoryPerPe)
 	case at32bit:
-		cu = NewControlUnit32bit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
-	default: // @todo remove this when 32 and 64 bit are implemented
-		cu = NewControlUnit24bit(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+		cu = NewControlUnit32bit(numIndexRegisters, numPe, memoryPerPe)
+	default: 
+		cu = NewControlUnit24bit(numIndexRegisters, numPe, memoryPerPe)
 	}
 
 	cu.Data().Verbose = verbose

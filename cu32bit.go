@@ -12,7 +12,7 @@ type ControlUnit32bit struct {
 /*
 nThe Memory is 1 "BytesPerElement" larger than the number of PEs. This is so the CU may have its own memory.
 */
-func NewControlUnit32bit(indexRegisters int, processingElements int, memoryBytesPerElement int) ControlUnit {
+func NewControlUnit32bit(indexRegisters uint, processingElements uint, memoryBytesPerElement uint) ControlUnit {
 	var cu ControlUnit32bit
 	cu.data = NewControlUnitData(indexRegisters, processingElements, memoryBytesPerElement)
 	return &cu

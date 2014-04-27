@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 )
 
 type ControlUnit24bit struct {
@@ -12,7 +13,7 @@ type ControlUnit24bit struct {
 /*
 nThe Memory is 1 "BytesPerElement" larger than the number of PEs. This is so the CU may have its own memory.
 */
-func NewControlUnit24bit(indexRegisters int, processingElements int, memoryBytesPerElement int) ControlUnit {
+func NewControlUnit24bit(indexRegisters uint, processingElements uint, memoryBytesPerElement uint) ControlUnit {
 	var cu ControlUnit24bit
 	cu.data = NewControlUnitData(indexRegisters, processingElements, memoryBytesPerElement)
 	return &cu
@@ -131,6 +132,7 @@ func (cu *ControlUnit24bit) Ldx(index byte, a uint16) {
 	cu.data.IndexRegister[index] = cu.data.Memory[a]
 }
 func (cu *ControlUnit24bit) Stx(index byte, a uint16) {
+	fmt.Println("debug: stx " + strconv.Itoa(int(index)) + " into " + strconv.Itoa(int(a)))
 	cu.data.Memory[a] = cu.data.IndexRegister[index]
 }
 func (cu *ControlUnit24bit) Ldxi(index byte, a byte) {
@@ -146,6 +148,7 @@ func (cu *ControlUnit24bit) Mulx(index byte, a byte) {
 	cu.data.IndexRegister[index] *= int64(a)
 }
 func (cu *ControlUnit24bit) Cload(index uint16) {
+//	fmt.Println("debug: cload " + strconv.Itoa(int(index)));
 	cu.data.ArithmeticRegister = cu.data.Memory[index]
 }
 func (cu *ControlUnit24bit) Cstore(index uint16) {

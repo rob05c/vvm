@@ -94,7 +94,11 @@ func ReplaceLabels(lines []string, labels map[string]int, program Program) (erro
 		}
 
 		if isMem(op) {
-			program.PushMem(op, byte(params[0]), uint16(params[1]))
+			if op == isCload || op == isCstore { // cload and cstore have a memparam but no 1st param
+				program.PushMem(op, byte(0), uint16(params[0]))
+			} else {
+				program.PushMem(op, byte(params[0]), uint16(params[1]))
+			}
 		} else {
 			var bytes []byte
 			bytes = append(bytes, byte(params[0]))
@@ -190,11 +194,12 @@ func ParsePseudoOperations(cu *ControlUnitData, lines []string, program Program)
 				return nil, errors.New("malformed line i " + strconv.Itoa(i))
 			}
 			if width > len(cu.PE) {
-				return nil, errors.New("line " + strconv.Itoa(i) + " exceeds number of Vector Processing Elements") /// @todo accomodate BSS matrices wider than len(cu.PE)
+				return nil, errors.New("line " + strconv.Itoa(i) + " exceeds number of Vector Processing Elements: " + strconv.Itoa(width) + ">" + strconv.Itoa(len(cu.PE))) 
+/// @todo accomodate BSS matrices wider than len(cu.PE)
 			}
 			if height+nextBssLocation > bytesPerPe {
 				//				fmt.Printf("Error exceeds width: %d, nbss: %d, bytesPerPe: %d\n", width, nextBssLocation, bytesPerPe)
-				return nil, errors.New("line " + strconv.Itoa(i) + " exceeds memory of Vector Processing Elements")
+				return nil, errors.New("line " + strconv.Itoa(i) + " exceeds memory of Vector Processing Elements: " + "w: " + strconv.Itoa(width) + ">" + strconv.Itoa(len(cu.PE)) + "h: " + strconv.Itoa(height) + "+" + strconv.Itoa(nextBssLocation) + ">" + strconv.Itoa(bytesPerPe))
 			}
 
 			data[alias] = nextBssLocation

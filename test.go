@@ -5,6 +5,12 @@ import (
 	"strconv"
 )
 
+const (
+	defaultIndexRegisters = 64
+	defaultProcessingElements = 32
+	defaultMemoryPerElement = 64
+)
+
 func testLoadMatrices(cu *ControlUnitData) {
 	n := 3
 	a := createMatrix(n)
@@ -46,7 +52,7 @@ ldxi j,0
 incx i,1
 cmpx i,lim,loop
 `
-	cu := NewControlUnit24bitPipelined(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+	cu := NewControlUnit24bitPipelined(defaultIndexRegisters, defaultProcessingElements, defaultMemoryPerElement)
 
 	//	lines, program, err := ParsePseudoOperations(cu,
 	//	lines)
@@ -75,7 +81,7 @@ cmpx i,lim,loop
 }
 
 func testMatrixMultiply() {
-	cu := NewControlUnit24bitPipelined(DefaultIndexRegisters, DefaultProcessingElements, DefaultMemoryPerElement)
+	cu := NewControlUnit24bitPipelined(defaultIndexRegisters, defaultProcessingElements, defaultMemoryPerElement)
 	fmt.Println("You made a vector VM with " + strconv.Itoa(len(cu.Data().PE)) + " processing elements.") //debug
 	n := 3
 	a := createMatrix(n)
