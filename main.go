@@ -115,6 +115,7 @@ func main() {
 			return
 		}
 		runProgram(cu, program)
+		return
 	}
 
 	if len(compileFile) != 0 {
