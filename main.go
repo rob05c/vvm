@@ -19,6 +19,7 @@ const (
 var compileFile string
 var outputFile string
 var verbose bool
+var script bool
 var archString string
 var arch ArchitectureType
 var memoryPerPe uint
@@ -33,6 +34,8 @@ func init() {
 		outputUsage    = "output file for compiled binary"
 		verboseDefault = false
 		verboseUsage   = "Verbose output, prints the state of the machine after each instruction"
+		scriptDefault = false
+		scriptUsage   = "Act as script, immediately output the execution result of the given assembly file."
 		archDefault    = "24bit"
 		archUsage      = "Machine architecture: 24bit, 24bitpipelined, 32bit."
 		peMemDefault   = 64
@@ -51,6 +54,8 @@ func init() {
 	flag.StringVar(&outputFile, "o", outputDefault, outputUsage+" (shorthand)")
 	flag.BoolVar(&verbose, "verbose", verboseDefault, verboseUsage)
 	flag.BoolVar(&verbose, "v", verboseDefault, verboseUsage+" (shorthand)")
+	flag.BoolVar(&script, "script", scriptDefault, scriptUsage)
+	flag.BoolVar(&script, "s", scriptDefault, scriptUsage+" (shorthand)")
 	flag.StringVar(&archString, "arch", archDefault, archUsage)
 	flag.StringVar(&archString, "a", archDefault, archUsage+" (shorthand)")
 	flag.UintVar(&memoryPerPe, "pemem", peMemDefault, peMemUsage)
@@ -63,6 +68,7 @@ func printUsage() {
 	fmt.Println("usage: ")
 	fmt.Println("\t" + exeName + " -c file-to-compile.sasm -o output-file")
 	fmt.Println("\t" + exeName + " file-to-execute.simd")
+	fmt.Println("\t" + exeName + " -s file-to-execute.sasm")
 	fmt.Println("flags:")
 	flag.PrintDefaults()
 	fmt.Println("example:\n\t" + exeName + " -c input.sasm")
@@ -99,10 +105,29 @@ func main() {
 	default: 
 		cu = NewControlUnit24bit(numIndexRegisters, numPe, memoryPerPe)
 	}
-
 	cu.Data().Verbose = verbose
+
+	if script {
+		compileFile = flag.Arg(0)
+		program, err := compile(cu, arch)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		runProgram(cu, program)
+	}
+
 	if len(compileFile) != 0 {
-		compile(cu, arch)
+		program, err := compile(cu, arch)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		err = program.Save(outputFile)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		return
 	}
 	if flag.NArg() <= 0 {
@@ -112,11 +137,10 @@ func main() {
 	run(cu)
 }
 
-func compile(cu ControlUnit, arch ArchitectureType) {
+func compile(cu ControlUnit, arch ArchitectureType) (Program, error) {
 	bytes, err := ioutil.ReadFile(compileFile)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return nil, err
 	}
 
 	input := string(bytes)
@@ -133,14 +157,9 @@ func compile(cu ControlUnit, arch ArchitectureType) {
 	}
 	err = LexProgram(cu.Data(), input, program)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return nil, err
 	}
-
-	err = program.Save(outputFile)
-	if err != nil {
-		fmt.Println(err)
-	}
+	return program, nil
 }
 
 func run(cu ControlUnit) {
@@ -149,6 +168,29 @@ func run(cu ControlUnit) {
 	programFile := flag.Arg(0)
 	start := time.Now()
 	cu.Run(programFile)
+	executionTime := time.Now().Sub(start)
+	fmt.Print("Program executed in ")
+	fmt.Print(executionTime)
+	fmt.Print(" on ")
+	fmt.Print(runtime.GOMAXPROCS(0))
+	fmt.Println(" cores.")
+	cu.PrintMachine()
+	/*
+		pr, err := NewProgramReader(programFile)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		for instruction, err := pr.ReadInstruction(); err == nil; instruction, err = pr.ReadInstruction() {
+			fmt.Println(instruction)
+		}
+	*/
+}
+
+func runProgram(cu ControlUnit, program Program) {
+	testLoadMatrices(cu.Data()) ///< @todo change sample input to load matrices within instructions, so this is unnecessary
+	start := time.Now()
+	cu.RunProgram(program)
 	executionTime := time.Now().Sub(start)
 	fmt.Print("Program executed in ")
 	fmt.Print(executionTime)

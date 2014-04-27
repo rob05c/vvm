@@ -28,14 +28,7 @@ func (cu *ControlUnit24bit) PrintMachine() {
 	cu.data.PrintMachine()
 }
 
-
-func (cu *ControlUnit24bit) Run(file string) error {
-
-	program, err := LoadProgram24bit(file)
-	if err != nil {
-		return err
-	}
-
+func (cu *ControlUnit24bit) RunProgram(program Program) error {
 	cu.ProgramCounter = 0
 	for cu.ProgramCounter != int64(program.Size()) {
 		pc := cu.ProgramCounter
@@ -67,6 +60,14 @@ func (cu *ControlUnit24bit) Run(file string) error {
 		cu.ProgramCounter++
 	}
 	return nil
+}
+
+func (cu *ControlUnit24bit) Run(file string) error {
+	program, err := LoadProgram24bit(file)
+	if err != nil {
+		return err
+	}
+	return cu.RunProgram(program)
 }
 
 func (cu *ControlUnit24bit) ExecuteMem(op OpCode, param byte, memParam uint16) {

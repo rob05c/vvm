@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"io"
 )
 
 const InstructionLength24bit = 3 ///< instructions are 3 bytes wide, or 24 bits
@@ -99,4 +100,20 @@ func (pr *ProgramReader24bit) ReadInstruction(num int64) ([]byte, error) {
 	instruction := make([]byte, InstructionLength24bit, InstructionLength24bit)
 	_, err := (*os.File)(pr).ReadAt(instruction, num*InstructionLength24bit)
 	return instruction, err
+}
+
+type ProgramReader24bitMem struct {
+	Program
+}
+
+func NewProgramReader24bitMem(program Program) (ProgramReader, error) {
+	pr := ProgramReader24bitMem{program}
+	return &pr, nil
+}
+
+func (pr *ProgramReader24bitMem) ReadInstruction(num int64) ([]byte, error) {
+	if num > pr.Program.Size() {
+		return nil, io.EOF
+	}
+	return pr.Program.At(num), nil
 }

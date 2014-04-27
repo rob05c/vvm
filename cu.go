@@ -7,6 +7,7 @@ import (
 /// @todo rename this, and ducks
 type ControlUnit interface {
 	Run(file string) error
+	RunProgram(program Program) error
 	PrintMachine()
 	Data() *ControlUnitData
 }

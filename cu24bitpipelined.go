@@ -291,12 +291,22 @@ func (cu *ControlUnit24bitPipelined) PrintMachine() {
 	cu.data.PrintMachine()
 }
 
+func (cu *ControlUnit24bitPipelined) RunProgram(program Program) error {
+	pr, err := NewProgramReader24bitMem(program)
+	if err != nil {
+		return err
+	}
+	return cu.run(pr)
+}
 func (cu *ControlUnit24bitPipelined) Run(programFile string) error {
 	pr, err := NewProgramReader24bit(programFile)
 	if err != nil {
 		return err
 	}
+	return cu.run(pr)
+}
 
+func (cu *ControlUnit24bitPipelined) run(pr ProgramReader) error {
 	go Fetcher(pr, 
 		cu.DecodeChan, 
 		cu.FetchWaitForPcChange, 
@@ -325,7 +335,7 @@ func (cu *ControlUnit24bitPipelined) Run(programFile string) error {
 
 	<-cu.Finished
 	return nil
-}
+}	
 
 func (cu *ControlUnit24bitPipelined) ExecuteMem(instruction OpCode, param byte, memParam uint16) {
 	switch instruction {
