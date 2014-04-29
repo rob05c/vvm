@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"strconv"
+//	"strconv"
 )
 
 type ControlUnit24bit struct {
@@ -133,7 +133,7 @@ func (cu *ControlUnit24bit) Ldx(index byte, a uint16) {
 	cu.data.IndexRegister[index] = cu.data.Memory[a]
 }
 func (cu *ControlUnit24bit) Stx(index byte, a uint16) {
-	fmt.Println("debug: stx " + strconv.Itoa(int(index)) + " into " + strconv.Itoa(int(a)))
+//	fmt.Println("debug: stx " + strconv.Itoa(int(index)) + " into " + strconv.Itoa(int(a)))
 	cu.data.Memory[a] = cu.data.IndexRegister[index]
 }
 func (cu *ControlUnit24bit) Ldxi(index byte, a byte) {
