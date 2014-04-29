@@ -8,6 +8,7 @@ a bss 20x20
 b bss 20x20
 c bss 20x20
 scratch equiv 41
+matrixDimension equiv 20
 
 ldxi i,0
 ldx lim,n
@@ -27,7 +28,7 @@ cload scratch
 cbcast
 rmul
 
-mulx lim,2
+incx lim,matrixDimension
 initloopb:
 ldxi x,1
 stx x,scratch
