@@ -16,6 +16,7 @@ const (
 	at32bit
 )
 
+const version = "1.0.1"
 var compileFile string
 var outputFile string
 var verbose bool
@@ -65,7 +66,7 @@ func init() {
 
 func printUsage() {
 	exeName := os.Args[0]
-	fmt.Println("usage: ")
+	fmt.Println(exeName + " " + version + " usage: ")
 	fmt.Println("\t" + exeName + " -c file-to-compile.sasm -o output-file")
 	fmt.Println("\t" + exeName + " file-to-execute.simd")
 	fmt.Println("\t" + exeName + " -s file-to-execute.sasm")
