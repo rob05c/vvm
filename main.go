@@ -41,13 +41,13 @@ func init() {
 		archUsage      = "Machine architecture: 24bit, 24bitpipelined, 32bit."
 		peMemDefault   = 64
 		peMemUsage     = `Memory per processing element. 
-        CAUTION: seting more than the instruction set can address will result in undefined behavior.`
+        CAUTION: setting more than the instruction set can address will result in undefined behavior.`
 		numPeDefault   = 32
 		numPeUsage     = `Number of processing elements. 
-        CAUTION: seting more than the instruction set can address will result in undefined behavior.`
+        CAUTION: setting more than the instruction set can address will result in undefined behavior.`
 		numIndexRegistersDefault   = 64
 		numIndexRegistersUsage = `Number of index registers. 
-        CAUTION: seting more than the instruction set can address will result in undefined behavior.`
+        CAUTION: setting more than the instruction set can address will result in undefined behavior.`
 	)
 	flag.StringVar(&compileFile, "compile", compileDefault, compileUsage)
 	flag.StringVar(&compileFile, "c", compileDefault, compileUsage+" (shorthand)")
