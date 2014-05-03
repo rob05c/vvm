@@ -80,20 +80,20 @@ func (cu *ControlUnit24bit) ExecuteMem(op OpCode, param byte, memParam uint16) {
 		cu.Cload(memParam)
 	case isCstore:
 		cu.Cstore(memParam)
+	case isLdxi:
+		cu.Ldxi(param, memParam)
+	case isIncx:
+		cu.Incx(param, memParam)
+	case isDecx:
+		cu.Decx(param, memParam)
+	case isMulx:
+		cu.Mulx(param, memParam)
 	}
 }
 
 /// @param params must have as many members as the instruction takes parameters
 func (cu *ControlUnit24bit) Execute(instruction OpCode, params []byte) {
 	switch instruction {
-	case isLdxi:
-		cu.Ldxi(params[0], params[1])
-	case isIncx:
-		cu.Incx(params[0], params[1])
-	case isDecx:
-		cu.Decx(params[0], params[1])
-	case isMulx:
-		cu.Mulx(params[0], params[1])
 	case isCmpx:
 		cu.Cmpx(params[0], params[1], params[2])
 	case isCbcast:
@@ -136,16 +136,16 @@ func (cu *ControlUnit24bit) Stx(index byte, a uint16) {
 	//	fmt.Println("debug: stx " + strconv.Itoa(int(index)) + " into " + strconv.Itoa(int(a)))
 	cu.data.Memory[a] = cu.data.IndexRegister[index]
 }
-func (cu *ControlUnit24bit) Ldxi(index byte, a byte) {
+func (cu *ControlUnit24bit) Ldxi(index byte, a uint16) {
 	cu.data.IndexRegister[index] = int64(a)
 }
-func (cu *ControlUnit24bit) Incx(index byte, a byte) {
+func (cu *ControlUnit24bit) Incx(index byte, a uint16) {
 	cu.data.IndexRegister[index] += int64(a)
 }
-func (cu *ControlUnit24bit) Decx(index byte, a byte) {
+func (cu *ControlUnit24bit) Decx(index byte, a uint16) {
 	cu.data.IndexRegister[index] -= int64(a)
 }
-func (cu *ControlUnit24bit) Mulx(index byte, a byte) {
+func (cu *ControlUnit24bit) Mulx(index byte, a uint16) {
 	cu.data.IndexRegister[index] *= int64(a)
 }
 func (cu *ControlUnit24bit) Cload(index uint16) {

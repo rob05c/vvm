@@ -174,5 +174,5 @@ var InstructionParams = map[OpCode]byte{
 
 /// @return whether the given instruction is a CU Memory instruction, i.e. using a 12-bit memory address
 func isMem(i OpCode) bool {
-	return i == isLdx || i == isStx || i == isCload || i == isCstore
+	return (i == isLdx || i == isStx || i == isCload || i == isCstore || i == isLdxi || i == isIncx || i == isDecx || i == isMulx)
 }

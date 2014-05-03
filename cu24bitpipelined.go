@@ -351,6 +351,14 @@ func (cu *ControlUnit24bitPipelined) ExecuteMem(instruction OpCode, param byte, 
 		cu.Cload(memParam)
 	case isCstore:
 		cu.Cstore(memParam)
+	case isLdxi:
+		cu.Ldxi(param, memParam)
+	case isIncx:
+		cu.Incx(param, memParam)
+	case isDecx:
+		cu.Decx(param, memParam)
+	case isMulx:
+		cu.Mulx(param, memParam)
 	}
 }
 
@@ -358,14 +366,6 @@ func (cu *ControlUnit24bitPipelined) ExecuteMem(instruction OpCode, param byte, 
 func (cu *ControlUnit24bitPipelined) Execute(instruction OpCode, params []byte) (jumpPos int64) {
 	jumpPos = NoJump
 	switch instruction {
-	case isLdxi:
-		cu.Ldxi(params[0], params[1])
-	case isIncx:
-		cu.Incx(params[0], params[1])
-	case isDecx:
-		cu.Decx(params[0], params[1])
-	case isMulx:
-		cu.Mulx(params[0], params[1])
 	case isCmpx:
 		jumpPos = cu.Cmpx(params[0], params[1], params[2])
 	case isCbcast:
@@ -408,16 +408,16 @@ func (cu *ControlUnit24bitPipelined) Ldx(index byte, a uint16) {
 func (cu *ControlUnit24bitPipelined) Stx(index byte, a uint16) {
 	cu.data.Memory[a] = cu.data.IndexRegister[index]
 }
-func (cu *ControlUnit24bitPipelined) Ldxi(index byte, a byte) {
+func (cu *ControlUnit24bitPipelined) Ldxi(index byte, a uint16) {
 	cu.data.IndexRegister[index] = int64(a)
 }
-func (cu *ControlUnit24bitPipelined) Incx(index byte, a byte) {
+func (cu *ControlUnit24bitPipelined) Incx(index byte, a uint16) {
 	cu.data.IndexRegister[index] += int64(a)
 }
-func (cu *ControlUnit24bitPipelined) Decx(index byte, a byte) {
+func (cu *ControlUnit24bitPipelined) Decx(index byte, a uint16) {
 	cu.data.IndexRegister[index] -= int64(a)
 }
-func (cu *ControlUnit24bitPipelined) Mulx(index byte, a byte) {
+func (cu *ControlUnit24bitPipelined) Mulx(index byte, a uint16) {
 	cu.data.IndexRegister[index] *= int64(a)
 }
 func (cu *ControlUnit24bitPipelined) Cload(index uint16) {
