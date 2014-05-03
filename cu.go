@@ -28,7 +28,7 @@ The Memory is 1 "BytesPerElement" larger than the number of PEs. This is so the 
 */
 func NewControlUnitData(indexRegisters uint, processingElements uint, memoryBytesPerElement uint) *ControlUnitData {
 	var d ControlUnitData
-	d.Verbose = true;
+	d.Verbose = true
 	memory := memoryBytesPerElement * (processingElements + 1) // +1 so the CU has its own memory
 	d.Memory = make([]int64, memory, memory)
 	d.IndexRegister = make([]int64, indexRegisters, indexRegisters)
@@ -81,9 +81,9 @@ func (cu *ControlUnitData) printMemory() {
 	fmt.Printf("\n")
 
 	for i := 0; i < bytesPerPe; i++ {
-//		if i > 8 {
-//			break //debug
-//		}
+		//		if i > 8 {
+		//			break //debug
+		//		}
 		fmt.Printf("    ")
 		for j := 0; j < len(cu.PE); j++ {
 			pe := cu.PE[j]

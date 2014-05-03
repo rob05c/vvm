@@ -19,6 +19,7 @@ type ExecuteParams struct {
 	op     OpCode
 	params []byte
 }
+
 func (p ExecuteParams) IsMem() bool {
 	return false
 }
@@ -40,6 +41,7 @@ type ExecuteMemParams struct {
 	param    byte
 	memParam uint16
 }
+
 func (p ExecuteMemParams) IsMem() bool {
 	return true
 }
@@ -60,21 +62,21 @@ type ControlUnit24bitPipelined struct {
 	data *ControlUnitData
 
 	FetchWaitForPcChange chan bool
-	FetchPcChangeChan        chan int64
-	FetchFinished  chan bool
-	FetchStop chan bool
+	FetchPcChangeChan    chan int64
+	FetchFinished        chan bool
+	FetchStop            chan bool
 
-	DecodeChan         chan []byte
+	DecodeChan     chan []byte
 	DecodeFinished chan bool
 	DecodeStop     chan bool
-	DecodePause        chan bool
-	DecodeResume       chan bool
+	DecodePause    chan bool
+	DecodeResume   chan bool
 
-	ExecuteChan     chan ExecuteParam
-	ExecuteStopChan chan bool
+	ExecuteChan         chan ExecuteParam
+	ExecuteStopChan     chan bool
 	ExecuteFinishedChan chan bool
 
-	Finished        chan bool
+	Finished chan bool
 }
 
 func tryGetPcChange(fetchWaitForPcChange <-chan bool, fetchPcChange <-chan int64, pc *int64) {
@@ -93,6 +95,7 @@ func getPcChange(fetchWaitForPcChange <-chan bool, fetchPcChange <-chan int64, p
 		return false
 	}
 }
+
 /// INVARIANT fetchWaitForPcChange MUST be passed BEFORE decodePause
 func Fetcher(pr ProgramReader,
 	decode chan<- []byte,
@@ -107,17 +110,17 @@ func Fetcher(pr ProgramReader,
 	for {
 		tryGetPcChange(fetchWaitForPcChange, fetchPcChange, &pc)
 		if instruction, ok := cache[pc]; ok {
-			decode<- instruction
+			decode <- instruction
 			pc++
 		}
 		instruction, err := pr.ReadInstruction(pc)
 		if err == nil {
 			cache[pc] = instruction
-			decode<- instruction
+			decode <- instruction
 			pc++
 			continue
 		}
-		fetchFinished<- true
+		fetchFinished <- true
 		if !getPcChange(fetchWaitForPcChange, fetchPcChange, &pc, fetchStop) {
 			return
 		}
@@ -127,10 +130,10 @@ func Fetcher(pr ProgramReader,
 /// if we recieve a Pause while sending an Execute, throw away the Execute, don't block on it,
 /// and Pause until Resume
 /// @return whether to keep going. False => stop
-func trySendExecute(execute chan<- ExecuteParam, 
-	decodePause <-chan bool, 
-	decodeResume <-chan bool, 
-	params ExecuteParam, 
+func trySendExecute(execute chan<- ExecuteParam,
+	decodePause <-chan bool,
+	decodeResume <-chan bool,
+	params ExecuteParam,
 	decodeStop <-chan bool) bool {
 
 	select {
@@ -146,7 +149,7 @@ func trySendExecute(execute chan<- ExecuteParam,
 }
 func trySendDecodeFinished(decodeFinished chan<- bool, decodePause <-chan bool, decodeResume <-chan bool) {
 	select {
-	case decodeFinished<- true:
+	case decodeFinished <- true:
 	case <-decodePause:
 		<-decodeResume
 		// don't send decodeFinished. Pause => pipeline flush
@@ -168,15 +171,15 @@ func Decoder(decode chan []byte,
 				param1 := instruction[0]>>6 | instruction[1]<<2&63
 				param2 := instruction[1]>>4 | instruction[2]<<4&63
 				param3 := instruction[2] >> 2
-				if(!trySendExecute(execute, decodePause, decodeResume, (ExecuteParams{op, []byte{param1, param2, param3}}), decodeStop)) {
+				if !trySendExecute(execute, decodePause, decodeResume, (ExecuteParams{op, []byte{param1, param2, param3}}), decodeStop) {
 					return
 				}
-				
+
 			} else {
 				param := instruction[0]>>6 | instruction[1]<<2&63
 				memParam := uint16(instruction[1]>>4) | uint16(instruction[2])<<4
 				params := ExecuteMemParams{op, param, memParam}
-				if(!trySendExecute(execute, decodePause, decodeResume, params, decodeStop)) {
+				if !trySendExecute(execute, decodePause, decodeResume, params, decodeStop) {
 					return
 				}
 			}
@@ -197,7 +200,7 @@ func drainDecode(decode <-chan []byte, decodePause chan<- bool, decodeResume cha
 		case <-decode:
 		case <-fetchFinished:
 		default:
-			decodeResume<- true
+			decodeResume <- true
 			return
 		}
 	}
@@ -209,9 +212,10 @@ func drainExecute(execute <-chan ExecuteParam, decodeFinished <-chan bool) {
 		case <-decodeFinished:
 		default:
 			return
-	}
+		}
 	}
 }
+
 /// sends on the Wait chan, while throwing away any executes we receive.
 /// this is necessary, because the Fetcher listening for the Wait may be trying to write to decode,
 /// while the Decoder is trying to write to Execute.
@@ -254,9 +258,9 @@ func Executor(cu *ControlUnit24bitPipelined,
 			drainExecute(execute, decodeFinished)
 			fetchPcChange <- jumpPos
 		case <-decodeFinished:
-			fetchStop<- true
-			decodeStop<- true
-			finished<- true
+			fetchStop <- true
+			decodeStop <- true
+			finished <- true
 			return
 		}
 	}
@@ -307,15 +311,15 @@ func (cu *ControlUnit24bitPipelined) Run(programFile string) error {
 }
 
 func (cu *ControlUnit24bitPipelined) run(pr ProgramReader) error {
-	go Fetcher(pr, 
-		cu.DecodeChan, 
-		cu.FetchWaitForPcChange, 
+	go Fetcher(pr,
+		cu.DecodeChan,
+		cu.FetchWaitForPcChange,
 		cu.FetchPcChangeChan,
 		cu.FetchFinished,
 		cu.FetchStop)
-	go Decoder(cu.DecodeChan, 
-		cu.ExecuteChan, 
-		cu.DecodePause, 
+	go Decoder(cu.DecodeChan,
+		cu.ExecuteChan,
+		cu.DecodePause,
 		cu.DecodeResume,
 		cu.FetchFinished,
 		cu.DecodeFinished,
@@ -335,7 +339,7 @@ func (cu *ControlUnit24bitPipelined) run(pr ProgramReader) error {
 
 	<-cu.Finished
 	return nil
-}	
+}
 
 func (cu *ControlUnit24bitPipelined) ExecuteMem(instruction OpCode, param byte, memParam uint16) {
 	switch instruction {
@@ -393,7 +397,6 @@ func (cu *ControlUnit24bitPipelined) Execute(instruction OpCode, params []byte) 
 	}
 	return
 }
-
 
 //
 // control instructions

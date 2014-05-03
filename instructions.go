@@ -176,4 +176,3 @@ var InstructionParams = map[OpCode]byte{
 func isMem(i OpCode) bool {
 	return i == isLdx || i == isStx || i == isCload || i == isCstore
 }
-

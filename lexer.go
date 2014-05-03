@@ -44,7 +44,7 @@ func RemoveBlanks(lines []string) []string {
 }
 
 /// @todo handle movR toA etc.
-func ReplaceLabels(lines []string, labels map[string]int, program Program) (error) {
+func ReplaceLabels(lines []string, labels map[string]int, program Program) error {
 	//	instructionSize := 3 ///< @todo don't hardcode instruction size here. Magic numbers bad!
 	realLabels := make(map[string]int)
 	for i, _ := range lines {
@@ -194,8 +194,8 @@ func ParsePseudoOperations(cu *ControlUnitData, lines []string, program Program)
 				return nil, errors.New("malformed line i " + strconv.Itoa(i))
 			}
 			if width > len(cu.PE) {
-				return nil, errors.New("line " + strconv.Itoa(i) + " exceeds number of Vector Processing Elements: " + strconv.Itoa(width) + ">" + strconv.Itoa(len(cu.PE))) 
-/// @todo accomodate BSS matrices wider than len(cu.PE)
+				return nil, errors.New("line " + strconv.Itoa(i) + " exceeds number of Vector Processing Elements: " + strconv.Itoa(width) + ">" + strconv.Itoa(len(cu.PE)))
+				/// @todo accomodate BSS matrices wider than len(cu.PE)
 			}
 			if height+nextBssLocation > bytesPerPe {
 				//				fmt.Printf("Error exceeds width: %d, nbss: %d, bytesPerPe: %d\n", width, nextBssLocation, bytesPerPe)

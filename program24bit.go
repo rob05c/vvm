@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
-	"io"
 )
 
 const InstructionLength24bit = 3 ///< instructions are 3 bytes wide, or 24 bits
@@ -42,7 +42,7 @@ func (p Program24bit) Size() int64 {
 }
 
 func (p Program24bit) At(index int64) []byte {
-	return p[index*InstructionLength24bit:index*InstructionLength24bit+InstructionLength24bit]
+	return p[index*InstructionLength24bit : index*InstructionLength24bit+InstructionLength24bit]
 }
 
 /// This doesn't really compile. The "compiling" to binary has already been done by the lexer
@@ -56,7 +56,6 @@ func LoadProgram24bit(file string) (Program, error) {
 	pp := Program24bit(p)
 	return Program(&pp), err
 }
-
 
 /// Data Pseudo-Operation
 ///

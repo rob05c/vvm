@@ -20,12 +20,12 @@ func (p *Program32bit) PushMem(instruction OpCode, param byte, memParam uint16) 
 	*p = append(*p, byte(instruction))
 	*p = append(*p, param)
 	*p = append(*p, byte(memParam))
-	*p = append(*p, byte(memParam >> 8))
+	*p = append(*p, byte(memParam>>8))
 }
 
 /// Do NOT call this for CU Mem instructions - ldx, stx, cload, cstore. Call PushMem instead.
 func (p *Program32bit) Push(instruction OpCode, params []byte) {
-	if len(params) < InstructionLength32bit - 1 {
+	if len(params) < InstructionLength32bit-1 {
 		panic("not enough params") /// @todo error?
 	}
 	*p = append(*p, byte(instruction))
@@ -40,7 +40,7 @@ func (p Program32bit) Size() int64 {
 }
 
 func (p Program32bit) At(index int64) []byte {
-	return p[index*InstructionLength32bit:index*InstructionLength32bit+InstructionLength32bit]
+	return p[index*InstructionLength32bit : index*InstructionLength32bit+InstructionLength32bit]
 }
 
 /// This doesn't really compile. The "compiling" to binary has already been done by the lexer
@@ -54,7 +54,6 @@ func LoadProgram32bit(file string) (Program, error) {
 	pp := Program32bit(p)
 	return Program(&pp), err
 }
-
 
 /// Data Pseudo-Operation
 ///

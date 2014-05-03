@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	defaultIndexRegisters = 64
+	defaultIndexRegisters     = 64
 	defaultProcessingElements = 32
-	defaultMemoryPerElement = 64
+	defaultMemoryPerElement   = 64
 )
 
 func testLoadMatrices(cu *ControlUnitData) {

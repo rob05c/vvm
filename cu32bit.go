@@ -5,7 +5,7 @@ import (
 )
 
 type ControlUnit32bit struct {
-	data *ControlUnitData
+	data           *ControlUnitData
 	ProgramCounter int64
 }
 
@@ -26,7 +26,6 @@ func (cu *ControlUnit32bit) PrintMachine() {
 	fmt.Println("Machine: 32bit")
 	cu.data.PrintMachine()
 }
-
 
 func (cu *ControlUnit32bit) RunProgram(program Program) error {
 	cu.ProgramCounter = 0

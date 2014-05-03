@@ -10,6 +10,7 @@ import (
 )
 
 type ArchitectureType uint
+
 const (
 	at24bit = ArchitectureType(iota)
 	at24bitpipelined
@@ -17,6 +18,7 @@ const (
 )
 
 const version = "1.0.1"
+
 var compileFile string
 var outputFile string
 var verbose bool
@@ -35,18 +37,18 @@ func init() {
 		outputUsage    = "output file for compiled binary"
 		verboseDefault = false
 		verboseUsage   = "Verbose output, prints the state of the machine after each instruction"
-		scriptDefault = false
-		scriptUsage   = "Act as script, immediately output the execution result of the given assembly file."
+		scriptDefault  = false
+		scriptUsage    = "Act as script, immediately output the execution result of the given assembly file."
 		archDefault    = "24bit"
 		archUsage      = "Machine architecture: 24bit, 24bitpipelined, 32bit."
 		peMemDefault   = 64
 		peMemUsage     = `Memory per processing element. 
         CAUTION: setting more than the instruction set can address will result in undefined behavior.`
-		numPeDefault   = 32
-		numPeUsage     = `Number of processing elements. 
+		numPeDefault = 32
+		numPeUsage   = `Number of processing elements. 
         CAUTION: setting more than the instruction set can address will result in undefined behavior.`
-		numIndexRegistersDefault   = 64
-		numIndexRegistersUsage = `Number of index registers. 
+		numIndexRegistersDefault = 64
+		numIndexRegistersUsage   = `Number of index registers. 
         CAUTION: setting more than the instruction set can address will result in undefined behavior.`
 	)
 	flag.StringVar(&compileFile, "compile", compileDefault, compileUsage)
@@ -103,7 +105,7 @@ func main() {
 		cu = NewControlUnit24bitPipelined(numIndexRegisters, numPe, memoryPerPe)
 	case at32bit:
 		cu = NewControlUnit32bit(numIndexRegisters, numPe, memoryPerPe)
-	default: 
+	default:
 		cu = NewControlUnit24bit(numIndexRegisters, numPe, memoryPerPe)
 	}
 	cu.Data().Verbose = verbose
@@ -149,7 +151,7 @@ func compile(cu ControlUnit, arch ArchitectureType) (Program, error) {
 	var program Program
 	switch arch {
 	case at24bit:
-	fallthrough
+		fallthrough
 	case at24bitpipelined:
 		program = NewProgram24bit()
 	case at32bit:
