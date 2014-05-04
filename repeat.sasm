@@ -11,7 +11,7 @@ scratch equiv 41
 matrixDimension equiv 20
 repeati equiv 4
 repeatLim equiv 5
-repeatCount equiv 300
+repeatCount equiv 255
 
 ldxi repeati,0
 ldxi repeatLim,repeatCount
